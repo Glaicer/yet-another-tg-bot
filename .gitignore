@@ -1,0 +1,14 @@
+# AGENTS
+.agent/*
+.codex/*
+.opencode/*
+opencode.json
+TECHSPEC.md
+
+// Project
+.env
+config/production/
+data/
+node_modules/
+dist/
+coverage/

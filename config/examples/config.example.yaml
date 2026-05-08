@@ -1,0 +1,132 @@
+app:
+  environment: production
+  logLevel: info
+
+telegram:
+  mode: polling
+  allowedChatIdEnv: TELEGRAM_ALLOWED_CHAT_ID
+  adminUserIdEnv: TELEGRAM_ADMIN_USER_ID
+  typingIndicator:
+    enabled: true
+    intervalMs: 4500
+  webhook:
+    publicUrl: null
+    path: /telegram/webhook
+    secretTokenEnv: TELEGRAM_WEBHOOK_SECRET
+
+http:
+  enabled: true
+  host: 0.0.0.0
+  port: 3000
+  healthPath: /healthz
+
+storage:
+  type: sqlite
+  databasePathEnv: SQLITE_DATABASE_PATH
+
+systemPrompt:
+  file: config/production/prompts/system.md
+
+characters:
+  directory: config/production/characters
+  default: default
+  selected: default
+  hotReload: true
+
+llm:
+  provider: openai
+  apiMode: responses
+  apiKeyEnv: MAIN_LLM_API_KEY
+  baseUrl: https://api.openai.com/v1
+  model: gpt-5.5-mini
+  temperature: 0.7
+  maxTokens: 800
+  reasoningEffort: none
+  supportsWebSearch: true
+  webSearch:
+    mode: openai_tool
+    maxResults: 5
+    requireCitations: true
+
+providers:
+  openai:
+    type: openai-compatible
+    supportsResponsesApi: true
+    supportsChatCompletionsApi: true
+    supportsReasoningEffort: true
+    webSearchMode: openai_tool
+
+  openrouter:
+    type: openai-compatible
+    supportsResponsesApi: true
+    supportsChatCompletionsApi: true
+    supportsReasoningEffort: provider-dependent
+    webSearchMode: openrouter_server_tool
+    legacyOnlineSuffix: true
+
+  opencode_go:
+    type: openai-compatible
+    supportsResponsesApi: unknown
+    supportsChatCompletionsApi: unknown
+    supportsReasoningEffort: provider-dependent
+    webSearchMode: none
+
+  ollama_cloud:
+    type: openai-compatible
+    supportsResponsesApi: unknown
+    supportsChatCompletionsApi: true
+    supportsReasoningEffort: false
+    webSearchMode: none
+
+guardrails:
+  enabled: true
+  failOpenOnProviderError: true
+  provider: openai-compatible
+  apiKeyEnv: GUARDRAILS_API_KEY
+  baseUrl: https://example.com/v1
+  model: llama-guard-4-12b
+  timeoutMs: 8000
+  refusalMessage: "I can't help with that request."
+  checkInput: true
+  checkOutput: false
+  blockPromptInjection: true
+
+rateLimit:
+  enabled: true
+  perUser:
+    windowMs: 60000
+    maxRequests: 5
+  perChat:
+    windowMs: 60000
+    maxRequests: 20
+
+queue:
+  enabled: true
+  maxConcurrentRequests: 2
+  maxQueueSize: 20
+  timeoutMs: 60000
+
+timeouts:
+  llmRequestMs: 60000
+  telegramSendMs: 10000
+
+commands:
+  registerOnStartup: true
+  group:
+    - command: help
+      description: Bot help
+    - command: search
+      description: Fact-checking with sources
+  adminPrivate:
+    - command: status
+      description: Bot status
+    - command: personas
+      description: List personas
+    - command: persona
+      description: Select persona
+
+logging:
+  sqlite:
+    enabled: true
+    logMessages: false
+    redactSecrets: true

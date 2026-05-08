@@ -1,0 +1,13 @@
+services:
+  bot:
+    build: .
+    container_name: telegram-llm-bot
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/app/data
+      - ./config/production:/app/config/production:ro
+    ports:
+      - "3000:3000"
