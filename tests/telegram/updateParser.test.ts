@@ -140,6 +140,24 @@ describe('parseMessage', () => {
     expect(result.type).toBe('no-op');
   });
 
+  it('returns new_chat_member for allowed group member join service messages', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      message_thread_id: 7,
+      new_chat_members: [makeUser(222)],
+    });
+
+    const result = parseMessage(message, BASE_CONFIG);
+
+    expect(result).toEqual({
+      type: 'new_chat_member',
+      chatId: BASE_CONFIG.allowedChatId,
+      threadId: 7,
+      userId: 222,
+    });
+  });
+
   it('returns unsupported_reply for image reply to bot without caption', () => {
     const message = makeMessage({
       chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),

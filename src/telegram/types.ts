@@ -8,6 +8,12 @@ export type UpdateParserConfig = {
 export type ParsedEvent =
   | { type: 'ignored' }
   | {
+      type: 'new_chat_member';
+      chatId: number;
+      threadId?: number;
+      userId: number;
+    }
+  | {
       type: 'group_request';
       chatId: number;
       threadId?: number;

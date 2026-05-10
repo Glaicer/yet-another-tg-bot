@@ -140,6 +140,7 @@ export const rawConfigSchema = z.object({
     queueTimeout: z.string().min(1),
     queueFull: z.string().min(1),
     llmError: z.string().min(1),
+    greetUser: z.string().min(1),
     helpText: z.string().min(1),
     helpSearchHint: z.string().min(1),
     searchEmptyArgs: z.string().min(1),

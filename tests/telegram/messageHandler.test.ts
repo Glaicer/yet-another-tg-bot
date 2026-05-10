@@ -15,6 +15,7 @@ function createMockDeps(): MessageHandlerDeps {
     queueTimeout: 'Request timed out. Please try again later.',
     queueFull: 'The bot is too busy. Please try again later.',
     llmError: 'Sorry, I encountered an error. Please try again later.',
+    greetUser: 'Welcome to the chat!',
     helpText:
       "How to use this bot:\n\n• Mention me with @username to ask a question\n• Reply to one of my messages without a mention\n• Reply to another user's text message while mentioning me to include their message in context",
     helpSearchHint: '• Use /search <instruction> to search the web',
@@ -182,6 +183,31 @@ describe('createMessageHandler', () => {
     expect(event.type).toBe('unsupported_reply');
     expect(event.chatId).toBe(String(-1001234567890));
     expect(event.userId).toBe('111');
+  });
+
+  it('greets new chat members without using the LLM pipeline', async () => {
+    const deps = createMockDeps();
+    const handler = createMessageHandler(deps);
+
+    await handler({
+      type: 'new_chat_member',
+      chatId: -1001234567890,
+      threadId: 7,
+      userId: 222,
+    });
+
+    expect(deps.sendSafeMessage).toHaveBeenCalledTimes(1);
+    expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+      { api: deps.api, logger: deps.logger },
+      -1001234567890,
+      deps.config.messages.greetUser,
+      { threadId: 7 },
+    );
+    expect(deps.rateLimiter.check).not.toHaveBeenCalled();
+    expect(deps.requestQueue.enqueue).not.toHaveBeenCalled();
+    expect(deps.guardrails.check).not.toHaveBeenCalled();
+    expect(deps.startTypingIndicator).not.toHaveBeenCalled();
+    expect(deps.callLlm).not.toHaveBeenCalled();
   });
 
   it('processes normal mention flow through the full pipeline', async () => {

@@ -180,11 +180,13 @@ expect(sendMessage).toHaveBeenCalledWith(...);
 2. **Triggers**: `@bot_username` mention, reply to bot's message, or group command (`/search`, `/help`).
    Replied context may come from user or bot message text, media captions, or Telegram quote text.
    Forum topic service messages are ignored as reply context so topic text messages still process normally.
-3. **Typing indicator**: `sendChatAction('typing')` repeated at interval while LLM processes.
+3. **New member greeting**: Allowed-group `new_chat_members` service messages are answered directly with
+   `messages.greetUser` from config. This path must not call guardrails, rate limiting, queueing, typing, or LLM.
+4. **Typing indicator**: `sendChatAction('typing')` repeated at interval while LLM processes.
    No placeholder "Thinking..." message.
-4. **No streaming in MVP**: Wait for full LLM response, send single message.
-5. **MarkdownV2**: Telegram MarkdownV2 formatting. Fallback to plain text on parse error.
-6. **Rate limiting**: Per-user + per-chat sliding window. Queue with bounded concurrency + timeout.
-7. **Guardrails**: Input checking via external LLM. Fail-open on provider error. Output is NOT checked.
-8. **SQLite logging**: Events logged with secrets redacted. Full user message text is NOT stored.
+5. **No streaming in MVP**: Wait for full LLM response, send single message.
+6. **MarkdownV2**: Telegram MarkdownV2 formatting. Fallback to plain text on parse error.
+7. **Rate limiting**: Per-user + per-chat sliding window. Queue with bounded concurrency + timeout.
+8. **Guardrails**: Input checking via external LLM. Fail-open on provider error. Output is NOT checked.
+9. **SQLite logging**: Events logged with secrets redacted. Full user message text is NOT stored.
    SHA256 hash is stored for audit traceability instead.

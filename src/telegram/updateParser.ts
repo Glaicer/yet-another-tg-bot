@@ -6,12 +6,11 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
   const userId = message.from?.id;
   const threadId = message.message_thread_id;
 
-  if (userId === undefined) {
-    return { type: 'no-op' };
-  }
-
   // Private chat handling
   if (message.chat.type === 'private') {
+    if (userId === undefined) {
+      return { type: 'no-op' };
+    }
     if (userId === config.adminUserId) {
       if (message.text && isCommand(message.text)) {
         const { command, args } = parseCommand(message.text);
@@ -28,6 +27,15 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
   // Not the allowed chat
   if (chatId !== config.allowedChatId) {
     return { type: 'ignored' };
+  }
+
+  const newChatMember = message.new_chat_members?.[0];
+  if (newChatMember) {
+    return { type: 'new_chat_member', chatId, threadId, userId: newChatMember.id };
+  }
+
+  if (userId === undefined) {
+    return { type: 'no-op' };
   }
 
   const text = message.text ?? message.caption;

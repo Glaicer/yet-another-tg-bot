@@ -92,6 +92,7 @@ export function createMockConfig(overrides?: Partial<ResolvedConfig>): ResolvedC
       queueTimeout: 'Request timed out. Please try again later.',
       queueFull: 'The bot is too busy. Please try again later.',
       llmError: 'Sorry, I encountered an error. Please try again later.',
+      greetUser: 'Welcome to the chat!',
       helpText:
         "How to use this bot:\n\n• Mention me with @username to ask a question\n• Reply to one of my messages without a mention\n• Reply to another user's text message while mentioning me to include their message in context",
       helpSearchHint: '• Use /search <instruction> to search the web',

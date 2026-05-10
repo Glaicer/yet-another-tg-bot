@@ -120,6 +120,7 @@ export type ResolvedConfig = {
     queueTimeout: string;
     queueFull: string;
     llmError: string;
+    greetUser: string;
     helpText: string;
     helpSearchHint: string;
     searchEmptyArgs: string;

@@ -68,6 +68,10 @@ export function createMessageHandler(deps: MessageHandlerDeps): MessageHandler {
         await handleUnsupportedReply(deps, event);
         return;
       }
+      case 'new_chat_member': {
+        await handleNewChatMember(deps, event);
+        return;
+      }
       case 'group_request': {
         await handleGroupRequest(deps, event);
         return;
@@ -103,6 +107,23 @@ async function handleUnsupportedReply(
   );
   deps.logger.logBotEvent({
     type: 'unsupported_reply',
+    chatId: String(event.chatId),
+    userId: String(event.userId),
+  });
+}
+
+async function handleNewChatMember(
+  deps: MessageHandlerDeps,
+  event: Extract<ParsedEvent, { type: 'new_chat_member' }>,
+): Promise<void> {
+  await deps.sendSafeMessage(
+    { api: deps.api, logger: deps.logger },
+    event.chatId,
+    deps.config.messages.greetUser,
+    { threadId: event.threadId },
+  );
+  deps.logger.logBotEvent({
+    type: 'greet_user',
     chatId: String(event.chatId),
     userId: String(event.userId),
   });

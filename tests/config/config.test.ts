@@ -181,6 +181,7 @@ messages:
   queueTimeout: "Request timed out. Please try again later."
   queueFull: "The bot is too busy. Please try again later."
   llmError: "Sorry, I encountered an error. Please try again later."
+  greetUser: "Welcome to the chat!"
   helpText: "How to use this bot"
   helpSearchHint: "• Use /search <instruction> to search the web"
   searchEmptyArgs: "Please provide a search instruction: /search <instruction>"
