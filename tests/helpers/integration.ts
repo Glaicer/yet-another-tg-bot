@@ -162,6 +162,7 @@ export async function setupApp(options?: {
       createLogger: vi.fn().mockReturnValue({
         logBotEvent: logBotEventMock,
         logGuardrailEvent: logGuardrailEventMock,
+        logConsoleEvent: vi.fn(),
       }),
       createCharacterStore: vi.fn().mockImplementation((opts) => {
         const list = options?.characterStoreOverrides?.listCharacters ?? ['default', 'sassy'];

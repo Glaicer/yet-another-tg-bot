@@ -28,6 +28,15 @@ CREATE TABLE IF NOT EXISTS bot_settings (
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS console_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL,
+  level TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  message TEXT NOT NULL,
+  metadata TEXT
+);
 `;
 
 export function createDatabase(databasePath: string): Database.Database {

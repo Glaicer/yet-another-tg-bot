@@ -57,6 +57,7 @@ function createMockDeps(overrides?: Partial<SearchCommandDeps>): SearchCommandDe
     logger: {
       logBotEvent: vi.fn(),
       logGuardrailEvent: vi.fn(),
+      logConsoleEvent: vi.fn(),
     },
     buildPrompt: vi.fn().mockReturnValue([
       { role: 'system', content: 'System prompt' },

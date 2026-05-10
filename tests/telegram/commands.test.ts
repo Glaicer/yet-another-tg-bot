@@ -69,6 +69,7 @@ function createMockDeps(): CommandDeps {
     logger: {
       logBotEvent: vi.fn(),
       logGuardrailEvent: vi.fn(),
+      logConsoleEvent: vi.fn(),
     },
     getUptimeSeconds: vi.fn().mockReturnValue(3665),
     buildPrompt: vi.fn().mockReturnValue([

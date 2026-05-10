@@ -118,6 +118,7 @@ describe('createApp', () => {
         createLogger: vi.fn().mockReturnValue({
           logBotEvent: vi.fn(),
           logGuardrailEvent: vi.fn(),
+          logConsoleEvent: vi.fn(),
         }),
         createCharacterStore: vi.fn().mockReturnValue({
           getCurrentCharacter: vi.fn().mockReturnValue({ name: 'default', content: 'Friendly' }),
@@ -192,6 +193,7 @@ describe('createApp', () => {
         createLogger: vi.fn().mockReturnValue({
           logBotEvent: vi.fn(),
           logGuardrailEvent: vi.fn(),
+          logConsoleEvent: vi.fn(),
         }),
         createCharacterStore: vi.fn().mockReturnValue({
           getCurrentCharacter: vi.fn().mockReturnValue({ name: 'default', content: 'Friendly' }),
@@ -240,5 +242,68 @@ describe('createApp', () => {
 
     const app = createApp(options);
     await expect(app.start()).rejects.toThrow('Config error');
+  });
+
+  it('logs startup errors after SQLite logger is available', async () => {
+    const mockConfig = createMockConfig({ http: { ...createMockConfig().http, enabled: false } });
+    const mockDb = {
+      close: vi.fn(),
+      prepare: vi.fn().mockReturnValue({ get: vi.fn().mockReturnValue({ '1': 1 }) }),
+    } as unknown as import('better-sqlite3').Database;
+    const logConsoleEvent = vi.fn();
+    const mockBot = {
+      botUsername: 'testbot',
+      botId: 123,
+      api: {
+        sendMessage: vi.fn().mockResolvedValue(undefined),
+        sendChatAction: vi.fn().mockResolvedValue(undefined),
+      },
+      start: vi.fn().mockRejectedValue(new Error('Polling failed')),
+      stop: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const options: CreateAppOptions = {
+      overrides: {
+        loadConfig: vi.fn().mockReturnValue(mockConfig),
+        createDatabase: vi.fn().mockReturnValue(mockDb),
+        createLogger: vi.fn().mockReturnValue({
+          logBotEvent: vi.fn(),
+          logGuardrailEvent: vi.fn(),
+          logConsoleEvent,
+        }),
+        createCharacterStore: vi.fn().mockReturnValue({
+          getCurrentCharacter: vi.fn().mockReturnValue({ name: 'default', content: 'Friendly' }),
+          listCharacters: vi.fn().mockReturnValue(['default']),
+          selectCharacter: vi.fn().mockReturnValue(true),
+        }),
+        createRateLimiter: vi
+          .fn()
+          .mockReturnValue({ check: vi.fn().mockReturnValue({ allowed: true }) }),
+        createRequestQueue: vi.fn().mockReturnValue({
+          enqueue: vi.fn().mockImplementation(async (task: () => Promise<unknown>) => {
+            try {
+              const value = await task();
+              return { ok: true as const, value };
+            } catch {
+              return { ok: false as const, reason: 'error' as const };
+            }
+          }),
+        }),
+        createGuardrailsService: vi
+          .fn()
+          .mockReturnValue({ check: vi.fn().mockResolvedValue({ allowed: true }) }),
+        createBot: vi.fn().mockResolvedValue(mockBot),
+        readSystemPrompt: vi.fn().mockReturnValue('System prompt'),
+      },
+    };
+
+    const app = createApp(options);
+    await expect(app.start()).rejects.toThrow('Polling failed');
+
+    expect(logConsoleEvent).toHaveBeenCalledWith({
+      level: 'error',
+      type: 'startup_error',
+      message: 'Polling failed',
+    });
   });
 });

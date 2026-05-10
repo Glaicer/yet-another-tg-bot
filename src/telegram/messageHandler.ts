@@ -5,7 +5,7 @@ import type { RequestQueue } from '../core/requestQueue.js';
 import type { GuardrailsInput, GuardrailsResult } from '../guardrails/guardrailsService.js';
 import type { LlmResponse, MapRequestOptions, MappedRequest } from '../llm/types.js';
 import type { PromptInput, PromptMessage } from '../prompt/promptBuilder.js';
-import type { BotEvent, GuardrailEvent } from '../storage/logger.js';
+import type { BotEvent, ConsoleEvent, GuardrailEvent } from '../storage/logger.js';
 import type { FirecrawlPage } from '../web/firecrawlClient.js';
 import { extractUrls } from '../web/urlExtractor.js';
 import { handleAdminCommand, handleGroupCommand } from './commands.js';
@@ -24,6 +24,7 @@ export type CharacterStoreLike = {
 export type LoggerLike = {
   logBotEvent(event: BotEvent): void;
   logGuardrailEvent(event: GuardrailEvent): void;
+  logConsoleEvent(event: ConsoleEvent): void;
 };
 
 export type GuardrailsLike = {
@@ -46,7 +47,12 @@ export type MessageHandlerDeps = {
     text: string,
     options?: { threadId?: number },
   ) => Promise<void>;
-  startTypingIndicator: (deps: { api: TypingApi; chatId: number; threadId?: number }) => {
+  startTypingIndicator: (deps: {
+    api: TypingApi;
+    chatId: number;
+    threadId?: number;
+    logger?: LoggerLike;
+  }) => {
     stop: () => void;
   };
   api: Api;
@@ -172,7 +178,12 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
   }
 
   const queueResult = await deps.requestQueue.enqueue(async () => {
-    const typing = deps.startTypingIndicator({ api: deps.api, chatId, threadId });
+    const typing = deps.startTypingIndicator({
+      api: deps.api,
+      chatId,
+      threadId,
+      logger: deps.logger,
+    });
     try {
       const guardrailsResult = await deps.guardrails.check({
         userText: text,
@@ -233,6 +244,15 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
         userId: String(userId),
         metadata: { error: errorMessage },
       });
+      deps.logger.logConsoleEvent({
+        level: 'error',
+        type: 'llm_error',
+        message: errorMessage,
+        metadata: {
+          chatId: String(chatId),
+          userId: String(userId),
+        },
+      });
     } finally {
       typing.stop();
     }
@@ -251,11 +271,23 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
         chatId: String(chatId),
         userId: String(userId),
       });
+      deps.logger.logConsoleEvent({
+        level: 'warn',
+        type: 'queue_timeout',
+        message: 'Request queue timed out',
+        metadata: { chatId: String(chatId), userId: String(userId) },
+      });
     } else if (queueResult.reason === 'queue-full') {
       deps.logger.logBotEvent({
         type: 'queue_full',
         chatId: String(chatId),
         userId: String(userId),
+      });
+      deps.logger.logConsoleEvent({
+        level: 'warn',
+        type: 'queue_full',
+        message: 'Request queue is full',
+        metadata: { chatId: String(chatId), userId: String(userId) },
       });
     }
   }
@@ -283,6 +315,12 @@ async function buildUserTextWithUrlContext(
         deps.logger.logBotEvent({
           type: 'firecrawl_error',
           metadata: { url, error: errorMessage },
+        });
+        deps.logger.logConsoleEvent({
+          level: 'warn',
+          type: 'firecrawl_error',
+          message: errorMessage,
+          metadata: { url },
         });
         return {
           url,

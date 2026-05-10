@@ -1,5 +1,5 @@
 import { formatTelegramMarkdownV2 } from '../prompt/markdown.js';
-import type { BotEvent } from '../storage/logger.js';
+import type { BotEvent, ConsoleEvent } from '../storage/logger.js';
 
 export type TelegramApi = {
   sendMessage(params: {
@@ -12,6 +12,7 @@ export type TelegramApi = {
 
 export type SenderLogger = {
   logBotEvent(event: BotEvent): void;
+  logConsoleEvent(event: ConsoleEvent): void;
 };
 
 export type SenderDeps = {
@@ -61,8 +62,24 @@ export async function sendSafeMessage(
       if (options?.threadId !== undefined) {
         fallbackPayload.message_thread_id = options.threadId;
       }
-      await deps.api.sendMessage(fallbackPayload);
+      try {
+        await deps.api.sendMessage(fallbackPayload);
+      } catch (fallbackError) {
+        deps.logger.logConsoleEvent({
+          level: 'error',
+          type: 'telegram_send_error',
+          message: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          metadata: { chatId: String(chatId), phase: 'plain_text' },
+        });
+        throw fallbackError;
+      }
     } else {
+      deps.logger.logConsoleEvent({
+        level: 'error',
+        type: 'telegram_send_error',
+        message: err instanceof Error ? err.message : String(err),
+        metadata: { chatId: String(chatId), phase: 'markdown' },
+      });
       throw err;
     }
   }

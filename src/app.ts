@@ -81,108 +81,133 @@ export function createApp(options?: CreateAppOptions): App {
         redactEnabled: config.logging.sqlite.redactSecrets,
       });
 
-      const createCharacterStoreFn =
-        options?.overrides?.createCharacterStore ?? ((opts) => new CharacterStore(opts));
-      const characterStore = createCharacterStoreFn({
-        db,
-        directory: config.characters.directory,
-        defaultName: config.characters.default,
-        hotReload: config.characters.hotReload,
-      });
+      try {
+        const createCharacterStoreFn =
+          options?.overrides?.createCharacterStore ?? ((opts) => new CharacterStore(opts));
+        const characterStore = createCharacterStoreFn({
+          db,
+          directory: config.characters.directory,
+          defaultName: config.characters.default,
+          hotReload: config.characters.hotReload,
+        });
 
-      const rateLimiter = createRateLimiter(config.rateLimit);
-      const requestQueue = createRequestQueue(config.queue);
+        const rateLimiter = createRateLimiter(config.rateLimit);
+        const requestQueue = createRequestQueue(config.queue);
 
-      const callLlmFn = options?.overrides?.callLlm ?? callLlm;
-      const guardrails = createGuardrailsService(config, logger, callLlmFn);
-      const firecrawlClient = config.firecrawl?.apiKey
-        ? createFirecrawlClient({
-            apiKey: config.firecrawl.apiKey,
-            baseUrl: config.firecrawl.baseUrl,
-          })
-        : undefined;
+        const callLlmFn = options?.overrides?.callLlm ?? callLlm;
+        const guardrails = createGuardrailsService(config, logger, callLlmFn);
+        const firecrawlClient = config.firecrawl?.apiKey
+          ? createFirecrawlClient({
+              apiKey: config.firecrawl.apiKey,
+              baseUrl: config.firecrawl.baseUrl,
+            })
+          : undefined;
 
-      const readSystemPromptFn = options?.overrides?.readSystemPrompt ?? fs.readFileSync;
-      const systemPrompt = readSystemPromptFn(config.systemPrompt.file, 'utf-8') as string;
+        const readSystemPromptFn = options?.overrides?.readSystemPrompt ?? fs.readFileSync;
+        const systemPrompt = readSystemPromptFn(config.systemPrompt.file, 'utf-8') as string;
 
-      const createBotFn = options?.overrides?.createBot ?? createBot;
-      botInstance = await createBotFn({
-        token: config.secrets.telegramBotToken,
-        mode: config.telegram.mode,
-        webhookConfig:
-          config.telegram.mode === 'webhook'
-            ? {
-                publicUrl: config.telegram.webhook.publicUrl ?? '',
-                path: config.telegram.webhook.path,
-                secretToken: config.telegram.webhook.secretToken,
-              }
-            : undefined,
-        handleUpdate: async (update: Update) => {
-          if (!update.message || !botInstance) return;
-          const event = parseMessage(update.message, {
-            allowedChatId: Number(config.telegram.allowedChatId),
-            adminUserId: Number(config.telegram.adminUserId),
-            botUsername: botInstance.botUsername,
-            botId: botInstance.botId,
-          });
+        const createBotFn = options?.overrides?.createBot ?? createBot;
+        botInstance = await createBotFn({
+          token: config.secrets.telegramBotToken,
+          mode: config.telegram.mode,
+          webhookConfig:
+            config.telegram.mode === 'webhook'
+              ? {
+                  publicUrl: config.telegram.webhook.publicUrl ?? '',
+                  path: config.telegram.webhook.path,
+                  secretToken: config.telegram.webhook.secretToken,
+                }
+              : undefined,
+          handleUpdate: async (update: Update) => {
+            try {
+              if (!update.message || !botInstance) return;
+              const event = parseMessage(update.message, {
+                allowedChatId: Number(config.telegram.allowedChatId),
+                adminUserId: Number(config.telegram.adminUserId),
+                botUsername: botInstance.botUsername,
+                botId: botInstance.botId,
+              });
 
-          const handler = createMessageHandler({
+              const handler = createMessageHandler({
+                config,
+                rateLimiter,
+                requestQueue,
+                guardrails,
+                characterStore,
+                buildPrompt,
+                mapLlmRequest: mapRequest,
+                callLlm: callLlmFn,
+                scrapeUrl: firecrawlClient?.scrape,
+                sendSafeMessage,
+                startTypingIndicator,
+                api: botInstance.api,
+                logger,
+                systemPrompt,
+                getUptimeSeconds,
+              });
+
+              await handler(event);
+            } catch (error) {
+              logger.logConsoleEvent({
+                level: 'error',
+                type: 'update_handler_error',
+                message: error instanceof Error ? error.message : String(error),
+                metadata: { updateId: String(update.update_id) },
+              });
+              throw error;
+            }
+          },
+          commands: config.commands,
+          supportsWebSearch: config.llm.supportsWebSearch,
+          logger: {
+            warn: (msg) => {
+              logger.logBotEvent({
+                type: 'command_registration_warning',
+                details: msg,
+              });
+              logger.logConsoleEvent({
+                level: 'warn',
+                type: 'command_registration_warning',
+                message: msg,
+              });
+            },
+          },
+        });
+
+        if (config.http.enabled || config.telegram.mode === 'webhook') {
+          const createHealthServerFn = options?.overrides?.createHealthServer ?? createHealthServer;
+
+          let webhookHandler:
+            | ((req: import('http').IncomingMessage, res: import('http').ServerResponse) => void)
+            | undefined;
+          if (config.telegram.mode === 'webhook') {
+            const { webhookCallback } = await import('grammy');
+            webhookHandler = webhookCallback(botInstance.grammYBot as import('grammy').Bot, 'http');
+          }
+
+          healthServer = createHealthServerFn({
             config,
-            rateLimiter,
-            requestQueue,
-            guardrails,
-            characterStore,
-            buildPrompt,
-            mapLlmRequest: mapRequest,
-            callLlm: callLlmFn,
-            scrapeUrl: firecrawlClient?.scrape,
-            sendSafeMessage,
-            startTypingIndicator,
-            api: botInstance.api,
-            logger,
-            systemPrompt,
             getUptimeSeconds,
+            database: db,
+            host: config.http.host,
+            port: config.http.port,
+            healthPath: config.http.healthPath,
+            webhookPath: config.telegram.webhook.path,
+            webhookHandler,
           });
-
-          await handler(event);
-        },
-        commands: config.commands,
-        supportsWebSearch: config.llm.supportsWebSearch,
-        logger: {
-          warn: (msg) =>
-            logger.logBotEvent({
-              type: 'command_registration_warning',
-              details: msg,
-            }),
-        },
-      });
-
-      if (config.http.enabled || config.telegram.mode === 'webhook') {
-        const createHealthServerFn = options?.overrides?.createHealthServer ?? createHealthServer;
-
-        let webhookHandler:
-          | ((req: import('http').IncomingMessage, res: import('http').ServerResponse) => void)
-          | undefined;
-        if (config.telegram.mode === 'webhook') {
-          const { webhookCallback } = await import('grammy');
-          webhookHandler = webhookCallback(botInstance.grammYBot as import('grammy').Bot, 'http');
+          await healthServer.start();
         }
 
-        healthServer = createHealthServerFn({
-          config,
-          getUptimeSeconds,
-          database: db,
-          host: config.http.host,
-          port: config.http.port,
-          healthPath: config.http.healthPath,
-          webhookPath: config.telegram.webhook.path,
-          webhookHandler,
+        // Start bot (non-blocking in polling, sets webhook in webhook mode)
+        await botInstance.start();
+      } catch (error) {
+        logger.logConsoleEvent({
+          level: 'error',
+          type: 'startup_error',
+          message: error instanceof Error ? error.message : String(error),
         });
-        await healthServer.start();
+        throw error;
       }
-
-      // Start bot (non-blocking in polling, sets webhook in webhook mode)
-      await botInstance.start();
     },
     stop: async () => {
       if (botInstance) {

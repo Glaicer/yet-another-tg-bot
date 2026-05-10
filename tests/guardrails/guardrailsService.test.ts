@@ -89,15 +89,18 @@ describe('guardrailsService', () => {
   let dbPath: string;
   let db: ReturnType<typeof createDatabase>;
   let logger: ReturnType<typeof createLogger>;
+  let consoleSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'guardrails-test-'));
     dbPath = path.join(tempDir, 'test.sqlite');
     db = createDatabase(dbPath);
     logger = createLogger(db, { secrets: ['guard-key'], redactEnabled: true });
+    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
+    consoleSpy.mockRestore();
     db.close();
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
@@ -155,6 +158,11 @@ describe('guardrailsService', () => {
 
     expect(result.allowed).toBe(true);
     expect(result.reason).toBeUndefined();
+
+    const rows = db.prepare('SELECT * FROM console_events').all() as Array<Record<string, unknown>>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event_type).toBe('guardrails_provider_error');
+    expect(rows[0].message).toBe('Network error');
   });
 
   it('fail-closed blocks on provider error', async () => {

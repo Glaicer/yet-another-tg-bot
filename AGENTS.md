@@ -88,7 +88,7 @@ src/
 │   └── characterStore.ts # CharacterStore — load .md files, persist selection in SQLite
 ├── storage/
 │   ├── database.ts       # createDatabase() — SQLite setup + migrations
-│   ├── logger.ts         # createLogger() — bot_events, guardrail_events (redacted)
+│   ├── logger.ts         # createLogger() — bot_events, guardrail_events, console_events (redacted)
 │   └── settings.ts       # Settings get/set via bot_settings table
 ├── core/
 │   ├── rateLimiter.ts    # createRateLimiter() — per-user, per-chat sliding windows
@@ -190,3 +190,5 @@ expect(sendMessage).toHaveBeenCalledWith(...);
 8. **Guardrails**: Input checking via external LLM. Fail-open on provider error. Output is NOT checked.
 9. **SQLite logging**: Events logged with secrets redacted. Full user message text is NOT stored.
    SHA256 hash is stored for audit traceability instead.
+10. **Failure diagnostics**: Runtime failures are written through `logConsoleEvent()`, which emits a
+    `console.log` line and inserts the same redacted failure record into SQLite `console_events`.

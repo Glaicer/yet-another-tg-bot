@@ -1,7 +1,7 @@
 import type { ResolvedConfig } from '../config/types.js';
 import { hashString } from '../core/hash.js';
 import type { LlmMessage, LlmResponse } from '../llm/types.js';
-import type { GuardrailEvent } from '../storage/logger.js';
+import type { ConsoleEvent, GuardrailEvent } from '../storage/logger.js';
 
 export type GuardrailsInput = {
   userText: string;
@@ -26,6 +26,7 @@ export type LlmCaller = (
 
 type GuardrailsLogger = {
   logGuardrailEvent: (event: GuardrailEvent) => void;
+  logConsoleEvent: (event: ConsoleEvent) => void;
 };
 
 export function createGuardrailsService(
@@ -103,6 +104,18 @@ export function createGuardrailsService(
             model: config.guardrails.model,
             verdict: 'error',
             error: error instanceof Error ? error.message : String(error),
+          },
+        });
+        logger.logConsoleEvent({
+          level: 'error',
+          type: 'guardrails_provider_error',
+          message: error instanceof Error ? error.message : String(error),
+          metadata: {
+            provider: config.guardrails.provider,
+            model: config.guardrails.model,
+            failOpen,
+            ...(input.chatId ? { chatId: input.chatId } : {}),
+            ...(input.userId ? { userId: input.userId } : {}),
           },
         });
 

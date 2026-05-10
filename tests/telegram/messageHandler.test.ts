@@ -90,6 +90,7 @@ function createMockDeps(): MessageHandlerDeps {
     logger: {
       logBotEvent: vi.fn(),
       logGuardrailEvent: vi.fn(),
+      logConsoleEvent: vi.fn(),
     },
     systemPrompt: 'You are a helpful assistant.',
     getUptimeSeconds: vi.fn().mockReturnValue(42),
@@ -223,6 +224,7 @@ describe('createMessageHandler', () => {
       api: deps.api,
       chatId: -1001234567890,
       threadId: undefined,
+      logger: deps.logger,
     });
     expect(deps.guardrails.check).toHaveBeenCalledWith({
       userText: 'What is the weather?',
@@ -461,6 +463,15 @@ describe('createMessageHandler', () => {
     const eventLog: BotEvent = deps.logger.logBotEvent.mock.calls[0][0];
     expect(eventLog.type).toBe('llm_error');
     expect(eventLog.metadata).toEqual({ error: 'LLM request failed: 500' });
+    expect(deps.logger.logConsoleEvent).toHaveBeenCalledWith({
+      level: 'error',
+      type: 'llm_error',
+      message: 'LLM request failed: 500',
+      metadata: {
+        chatId: '-1001234567890',
+        userId: '111',
+      },
+    });
   });
 
   it('sends error message and logs on LLM timeout', async () => {
@@ -481,6 +492,15 @@ describe('createMessageHandler', () => {
     const eventLog: BotEvent = deps.logger.logBotEvent.mock.calls[0][0];
     expect(eventLog.type).toBe('llm_error');
     expect(eventLog.metadata).toEqual({ error: 'LLM request timed out after 5000ms' });
+    expect(deps.logger.logConsoleEvent).toHaveBeenCalledWith({
+      level: 'error',
+      type: 'llm_error',
+      message: 'LLM request timed out after 5000ms',
+      metadata: {
+        chatId: '-1001234567890',
+        userId: '111',
+      },
+    });
   });
 
   it('sends queue timeout message and logs when queue times out', async () => {
@@ -639,6 +659,7 @@ describe('createMessageHandler', () => {
       api: deps.api,
       chatId: 12345,
       threadId: undefined,
+      logger: deps.logger,
     });
     expect(deps.guardrails.check).toHaveBeenCalledWith({
       userText: 'Hello bot',

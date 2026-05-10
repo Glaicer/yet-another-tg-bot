@@ -1,4 +1,4 @@
-import type { BotEvent, GuardrailEvent } from '../storage/logger.js';
+import type { BotEvent, ConsoleEvent, GuardrailEvent } from '../storage/logger.js';
 import { type SearchCommandDeps, handleSearch } from './searchCommand.js';
 import type { ParsedEvent } from './types.js';
 
@@ -11,6 +11,7 @@ export type CharacterStore = {
 export type LoggerLike = {
   logBotEvent(event: BotEvent): void;
   logGuardrailEvent(event: GuardrailEvent): void;
+  logConsoleEvent(event: ConsoleEvent): void;
 };
 
 export type CommandDeps = SearchCommandDeps & {

@@ -13,6 +13,7 @@ function createMockLogger() {
   return {
     logBotEvent: vi.fn(),
     logGuardrailEvent: vi.fn(),
+    logConsoleEvent: vi.fn(),
   };
 }
 
@@ -190,6 +191,12 @@ describe('sendSafeMessage', () => {
 
     expect(api.sendMessage).toHaveBeenCalledTimes(1);
     expect(logger.logBotEvent).not.toHaveBeenCalled();
+    expect(logger.logConsoleEvent).toHaveBeenCalledWith({
+      level: 'error',
+      type: 'telegram_send_error',
+      message: 'Network error',
+      metadata: { chatId: '123', phase: 'markdown' },
+    });
   });
 
   it('does not retry if fallback also fails', async () => {
@@ -204,6 +211,12 @@ describe('sendSafeMessage', () => {
 
     expect(api.sendMessage).toHaveBeenCalledTimes(2);
     expect(logger.logBotEvent).toHaveBeenCalledTimes(1);
+    expect(logger.logConsoleEvent).toHaveBeenCalledWith({
+      level: 'error',
+      type: 'telegram_send_error',
+      message: 'Second failure',
+      metadata: { chatId: '123', phase: 'plain_text' },
+    });
   });
 
   it('matches case-insensitive parse entity errors', async () => {

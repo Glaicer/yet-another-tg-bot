@@ -24,6 +24,13 @@ export type GuardrailEvent = {
   metadata?: Record<string, unknown>;
 };
 
+export type ConsoleEvent = {
+  level: 'error' | 'warn' | 'info';
+  type: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
 function redactValue(
   value: string | undefined,
   secrets: string[],
@@ -42,6 +49,11 @@ export function createLogger(db: Database.Database, options: LoggerOptions) {
   const insertGuardrailEvent = db.prepare(
     `INSERT INTO guardrail_events (timestamp, chat_id, user_id, hash, blocked, reason, metadata)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  const insertConsoleEvent = db.prepare(
+    `INSERT INTO console_events (timestamp, level, event_type, message, metadata)
+     VALUES (?, ?, ?, ?, ?)`,
   );
 
   return {
@@ -75,6 +87,23 @@ export function createLogger(db: Database.Database, options: LoggerOptions) {
         event.reason ?? null,
         metaStr ?? null,
       );
+    },
+
+    logConsoleEvent(event: ConsoleEvent): void {
+      const timestamp = new Date().toISOString();
+      const message = redactValue(event.message, options.secrets, options.redactEnabled) ?? '';
+      const metaStr = event.metadata
+        ? redactValue(JSON.stringify(event.metadata), options.secrets, options.redactEnabled)
+        : undefined;
+      const metadata = metaStr ? (JSON.parse(metaStr) as Record<string, unknown>) : undefined;
+
+      insertConsoleEvent.run(timestamp, event.level, event.type, message, metaStr ?? null);
+
+      if (metadata) {
+        console.log(`[${event.level}] ${event.type}: ${message}`, metadata);
+      } else {
+        console.log(`[${event.level}] ${event.type}: ${message}`);
+      }
     },
   };
 }

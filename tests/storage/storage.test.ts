@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hashString } from '../../src/core/hash.js';
 import { redactSecrets } from '../../src/core/redact.js';
 import { createDatabase } from '../../src/storage/database.js';
@@ -31,6 +31,7 @@ describe('storage', () => {
       expect(names).toContain('bot_events');
       expect(names).toContain('guardrail_events');
       expect(names).toContain('bot_settings');
+      expect(names).toContain('console_events');
       db.close();
     });
   });
@@ -118,6 +119,38 @@ describe('storage', () => {
       const rows = db.prepare('SELECT * FROM bot_events').all() as Array<Record<string, unknown>>;
       const metadata = JSON.parse(rows[0].metadata as string) as Record<string, unknown>;
       expect(metadata.msg).toBe('contains [REDACTED] data');
+      db.close();
+    });
+
+    it('writes redacted failure events to console_events and console.log', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const db = createDatabase(dbPath);
+      const logger = createLogger(db, {
+        secrets: ['secret-token'],
+        redactEnabled: true,
+      });
+
+      logger.logConsoleEvent({
+        level: 'error',
+        type: 'llm_error',
+        message: 'Request failed with secret-token',
+        metadata: { endpoint: 'https://example.com?api_key=secret-token' },
+      });
+
+      const rows = db.prepare('SELECT * FROM console_events').all() as Array<
+        Record<string, unknown>
+      >;
+      expect(rows).toHaveLength(1);
+      expect(rows[0].level).toBe('error');
+      expect(rows[0].event_type).toBe('llm_error');
+      expect(rows[0].message).toBe('Request failed with [REDACTED]');
+      const metadata = JSON.parse(rows[0].metadata as string) as Record<string, unknown>;
+      expect(metadata.endpoint).toBe('https://example.com?api_key=[REDACTED]');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[error] llm_error: Request failed with [REDACTED]',
+        metadata,
+      );
+      consoleSpy.mockRestore();
       db.close();
     });
   });

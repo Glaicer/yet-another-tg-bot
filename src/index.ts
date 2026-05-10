@@ -3,7 +3,7 @@ import { createApp } from './app.js';
 const app = createApp();
 
 app.start().catch((err) => {
-  console.error('Failed to start app:', err);
+  console.log('Failed to start app:', err);
   process.exit(1);
 });
 
@@ -13,7 +13,7 @@ async function shutdown(signal: string) {
     await app.stop();
     process.exit(0);
   } catch (err) {
-    console.error('Error during shutdown:', err);
+    console.log('Error during shutdown:', err);
     process.exit(1);
   }
 }

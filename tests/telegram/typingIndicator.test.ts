@@ -9,6 +9,12 @@ function createMockApi() {
 }
 
 describe('startTypingIndicator', () => {
+  function createMockLogger() {
+    return {
+      logConsoleEvent: vi.fn(),
+    };
+  }
+
   it('calls sendChatAction immediately with typing action', () => {
     const api = createMockApi();
 
@@ -71,9 +77,10 @@ describe('startTypingIndicator', () => {
   it('does not throw if sendChatAction rejects', () => {
     const api = createMockApi();
     api.sendChatAction.mockRejectedValue(new Error('Telegram error'));
+    const logger = createMockLogger();
 
     expect(() => {
-      startTypingIndicator({ api, chatId: 123 });
+      startTypingIndicator({ api, chatId: 123, logger });
     }).not.toThrow();
   });
 
@@ -84,8 +91,9 @@ describe('startTypingIndicator', () => {
       .mockResolvedValueOnce(true)
       .mockRejectedValueOnce(new Error('Telegram error'))
       .mockResolvedValue(true);
+    const logger = createMockLogger();
 
-    startTypingIndicator({ api, chatId: 123 });
+    startTypingIndicator({ api, chatId: 123, logger });
     expect(api.sendChatAction).toHaveBeenCalledTimes(1);
 
     vi.advanceTimersByTime(4000);
@@ -95,5 +103,21 @@ describe('startTypingIndicator', () => {
     expect(api.sendChatAction).toHaveBeenCalledTimes(3);
 
     vi.useRealTimers();
+  });
+
+  it('logs sendChatAction failures', async () => {
+    const api = createMockApi();
+    api.sendChatAction.mockRejectedValue(new Error('Telegram error'));
+    const logger = createMockLogger();
+
+    startTypingIndicator({ api, chatId: 123, threadId: 42, logger });
+    await Promise.resolve();
+
+    expect(logger.logConsoleEvent).toHaveBeenCalledWith({
+      level: 'warn',
+      type: 'typing_indicator_error',
+      message: 'Telegram error',
+      metadata: { chatId: '123', threadId: '42' },
+    });
   });
 });
