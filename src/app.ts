@@ -19,6 +19,7 @@ import { createMessageHandler } from './telegram/messageHandler.js';
 import { sendSafeMessage } from './telegram/sender.js';
 import { startTypingIndicator } from './telegram/typingIndicator.js';
 import { parseMessage } from './telegram/updateParser.js';
+import { createFirecrawlClient } from './web/firecrawlClient.js';
 
 export type App = {
   start: () => Promise<void>;
@@ -72,6 +73,7 @@ export function createApp(options?: CreateAppOptions): App {
       if (config.secrets.telegramBotToken) secrets.push(config.secrets.telegramBotToken);
       if (config.llm.apiKey) secrets.push(config.llm.apiKey);
       if (config.guardrails.apiKey) secrets.push(config.guardrails.apiKey);
+      if (config.firecrawl?.apiKey) secrets.push(config.firecrawl.apiKey);
 
       const createLoggerFn = options?.overrides?.createLogger ?? createLogger;
       const logger = createLoggerFn(db, {
@@ -93,6 +95,12 @@ export function createApp(options?: CreateAppOptions): App {
 
       const callLlmFn = options?.overrides?.callLlm ?? callLlm;
       const guardrails = createGuardrailsService(config, logger, callLlmFn);
+      const firecrawlClient = config.firecrawl?.apiKey
+        ? createFirecrawlClient({
+            apiKey: config.firecrawl.apiKey,
+            baseUrl: config.firecrawl.baseUrl,
+          })
+        : undefined;
 
       const readSystemPromptFn = options?.overrides?.readSystemPrompt ?? fs.readFileSync;
       const systemPrompt = readSystemPromptFn(config.systemPrompt.file, 'utf-8') as string;
@@ -127,6 +135,7 @@ export function createApp(options?: CreateAppOptions): App {
             buildPrompt,
             mapLlmRequest: mapRequest,
             callLlm: callLlmFn,
+            scrapeUrl: firecrawlClient?.scrape,
             sendSafeMessage,
             startTypingIndicator,
             api: botInstance.api,

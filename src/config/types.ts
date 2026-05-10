@@ -53,6 +53,10 @@ export type ResolvedConfig = {
       requireCitations: boolean;
     };
   };
+  firecrawl: {
+    apiKey?: string;
+    baseUrl: string;
+  };
   providers: Record<
     string,
     {

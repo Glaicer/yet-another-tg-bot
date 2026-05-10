@@ -192,6 +192,8 @@ function formatSearchResponse(response: LlmResponse): string {
       (source, index) => `${index + 1}. ${source.title} — ${source.url}`,
     );
     text += `\n\nSources:\n${sourceLines.join('\n')}`;
+  } else {
+    text += '\n\nI could not confirm this with external sources.';
   }
 
   return text;

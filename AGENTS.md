@@ -78,6 +78,9 @@ src/
 │   └── types.ts          # MappedRequest, LlmResponse
 ├── guardrails/
 │   └── guardrailsService.ts # createGuardrailsService() — checks input via LLM
+├── web/
+│   ├── firecrawlClient.ts   # Firecrawl scrape client for URL markdown context
+│   └── urlExtractor.ts      # URL detection helpers for user messages
 ├── prompt/
 │   ├── promptBuilder.ts  # buildPrompt() — system+character+user+replied
 │   └── markdown.ts       # MarkdownV2 escaping
@@ -151,6 +154,7 @@ expect(sendMessage).toHaveBeenCalledWith(...);
 - `config/examples/` — example config, characters, and prompts.
 - Config fields reference env var names (e.g., `apiKeyEnv: MAIN_LLM_API_KEY`), never inline secrets.
 - Config supports `providers` section for multi-provider detection (openai, openrouter, opencode_go, ollama_cloud).
+- Optional `FIRECRAWL_API_KEY` enables URL markdown extraction for messages that contain links.
 - Config `messages` section defines all user-facing reply texts (errors, help, status, personas, etc.).
   Templates use `{name}` and `{list}` placeholders. No hardcoded reply strings in source code.
 

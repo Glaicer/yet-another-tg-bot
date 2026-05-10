@@ -239,6 +239,22 @@ describe('loadConfig', () => {
     expect(config.llm.reasoningEffort).toBe('none');
   });
 
+  it('loads optional Firecrawl API key from environment when present', () => {
+    process.env.FIRECRAWL_API_KEY = 'fc-test-key';
+    const { promptsDir, charsDir } = setupFiles(tempDir);
+    const yamlContent = baseYaml()
+      .replace(/PROMPTS_DIR/g, promptsDir)
+      .replace(/CHARS_DIR/g, charsDir);
+    const configPath = writeYaml(tempDir, 'config.yaml', yamlContent);
+
+    const config = loadConfig({ configPath });
+
+    expect(config.firecrawl).toEqual({
+      apiKey: 'fc-test-key',
+      baseUrl: 'https://api.firecrawl.dev',
+    });
+  });
+
   it('throws when config file does not exist', () => {
     expect(() => loadConfig({ configPath: path.join(tempDir, 'missing.yaml') })).toThrow(
       /config file/i,

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
-import { loadEnv, requireEnv, resolveEnvVarRequired } from './env.js';
+import { loadEnv, requireEnv, resolveEnvVar, resolveEnvVarRequired } from './env.js';
 import { type RawConfig, rawConfigSchema } from './schema.js';
 import type { ResolvedConfig } from './types.js';
 
@@ -49,6 +49,7 @@ export function loadConfig(options: LoadConfigOptions): ResolvedConfig {
   const adminUserId = resolveEnvVarRequired(raw.telegram.adminUserIdEnv);
   const databasePath = resolveEnvVarRequired(raw.storage.databasePathEnv);
   const apiKey = resolveEnvVarRequired(raw.llm.apiKeyEnv);
+  const firecrawlApiKey = resolveEnvVar('FIRECRAWL_API_KEY');
   const guardrailsApiKey = raw.guardrails.enabled
     ? resolveEnvVarRequired(raw.guardrails.apiKeyEnv)
     : undefined;
@@ -136,6 +137,10 @@ export function loadConfig(options: LoadConfigOptions): ResolvedConfig {
       reasoningEffort: raw.llm.reasoningEffort,
       supportsWebSearch: raw.llm.supportsWebSearch,
       webSearch: raw.llm.webSearch,
+    },
+    firecrawl: {
+      apiKey: firecrawlApiKey,
+      baseUrl: 'https://api.firecrawl.dev',
     },
     providers: raw.providers,
     guardrails: {

@@ -29,6 +29,10 @@ function createMockDeps(): MessageHandlerDeps {
 
   return {
     config: {
+      firecrawl: {
+        apiKey: undefined,
+        baseUrl: 'https://api.firecrawl.dev',
+      },
       llm: {
         model: 'gpt-4',
         temperature: 0.7,
@@ -71,6 +75,11 @@ function createMockDeps(): MessageHandlerDeps {
       body: { model: 'gpt-4', messages: [] },
     }),
     callLlm: vi.fn().mockResolvedValue({ text: 'LLM response' }),
+    scrapeUrl: vi.fn().mockResolvedValue({
+      url: 'https://example.com/article',
+      title: 'Example Article',
+      markdown: '# Example Article\n\nFirecrawl content',
+    }),
     sendSafeMessage: vi.fn().mockResolvedValue(undefined),
     startTypingIndicator: vi.fn().mockReturnValue({ stop: vi.fn() }),
     api: {
@@ -258,6 +267,57 @@ describe('createMessageHandler', () => {
     expect(deps.logger.logBotEvent).toHaveBeenCalledTimes(1);
     const eventLog: BotEvent = deps.logger.logBotEvent.mock.calls[0][0];
     expect(eventLog.hash).toBe(hashString('Can you explain this?The sky is blue'));
+  });
+
+  it('adds Firecrawl markdown to the LLM prompt when URLs and API key are present', async () => {
+    const deps = createMockDeps();
+    deps.config.firecrawl.apiKey = 'fc-test';
+    const handler = createMessageHandler(deps);
+
+    await handler(makeGroupRequest({ text: 'Summarize https://example.com/article please' }));
+
+    expect(deps.scrapeUrl).toHaveBeenCalledWith('https://example.com/article');
+    expect(deps.buildPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userText: expect.stringContaining('User supplied web pages as additional context'),
+      }),
+    );
+    expect(deps.buildPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userText: expect.stringContaining('# Example Article\n\nFirecrawl content'),
+      }),
+    );
+  });
+
+  it('asks the LLM to mention URL handling is off when URLs are present without API key', async () => {
+    const deps = createMockDeps();
+    const handler = createMessageHandler(deps);
+
+    await handler(makeGroupRequest({ text: 'Read https://example.com/article' }));
+
+    expect(deps.scrapeUrl).not.toHaveBeenCalled();
+    expect(deps.buildPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userText: expect.stringContaining(
+          '<IMPORTANT> Mention to the user that URL handling is switched off now',
+        ),
+      }),
+    );
+  });
+
+  it('does not alter prompt text or scrape pages when no URL is present', async () => {
+    const deps = createMockDeps();
+    deps.config.firecrawl.apiKey = 'fc-test';
+    const handler = createMessageHandler(deps);
+
+    await handler(makeGroupRequest({ text: 'No links here' }));
+
+    expect(deps.scrapeUrl).not.toHaveBeenCalled();
+    expect(deps.buildPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userText: 'No links here',
+      }),
+    );
   });
 
   it('works for reply-to-bot flow (no repliedText)', async () => {

@@ -6,6 +6,8 @@ import type { GuardrailsInput, GuardrailsResult } from '../guardrails/guardrails
 import type { LlmResponse, MapRequestOptions, MappedRequest } from '../llm/types.js';
 import type { PromptInput, PromptMessage } from '../prompt/promptBuilder.js';
 import type { BotEvent, GuardrailEvent } from '../storage/logger.js';
+import type { FirecrawlPage } from '../web/firecrawlClient.js';
+import { extractUrls } from '../web/urlExtractor.js';
 import { handleAdminCommand, handleGroupCommand } from './commands.js';
 import type { TelegramApi as SenderApi } from './sender.js';
 import type { ParsedEvent } from './types.js';
@@ -37,6 +39,7 @@ export type MessageHandlerDeps = {
   buildPrompt: (input: PromptInput) => PromptMessage[];
   mapLlmRequest: (config: ResolvedConfig, options: MapRequestOptions) => MappedRequest;
   callLlm: (request: MappedRequest, timeoutMs: number) => Promise<LlmResponse>;
+  scrapeUrl?: (url: string) => Promise<FirecrawlPage>;
   sendSafeMessage: (
     deps: { api: SenderApi; logger: LoggerLike },
     chatId: number,
@@ -168,10 +171,11 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
       }
 
       const character = deps.characterStore.getCurrentCharacter();
+      const promptUserText = await buildUserTextWithUrlContext(deps, text);
       const messages = deps.buildPrompt({
         systemPrompt: deps.systemPrompt,
         character: character.content,
-        userText: text,
+        userText: promptUserText,
         repliedText,
       });
 
@@ -234,4 +238,50 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
       });
     }
   }
+}
+
+async function buildUserTextWithUrlContext(
+  deps: MessageHandlerDeps,
+  text: string,
+): Promise<string> {
+  const urls = extractUrls(text);
+  if (urls.size === 0) {
+    return text;
+  }
+
+  if (!deps.config.firecrawl?.apiKey || !deps.scrapeUrl) {
+    return `${text}\n\n<IMPORTANT> Mention to the user that URL handling is switched off now.`;
+  }
+
+  const pages = await Promise.all(
+    [...urls].map(async (url) => {
+      try {
+        return await deps.scrapeUrl?.(url);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        deps.logger.logBotEvent({
+          type: 'firecrawl_error',
+          metadata: { url, error: errorMessage },
+        });
+        return {
+          url,
+          markdown: `Firecrawl could not retrieve this page: ${errorMessage}`,
+        };
+      }
+    }),
+  );
+
+  const pageContext = pages
+    .filter((page): page is FirecrawlPage => page !== undefined)
+    .map((page, index) => {
+      const title = page.title ? ` (${page.title})` : '';
+      return `## Page ${index + 1}: ${page.url}${title}\n\n${page.markdown}`;
+    })
+    .join('\n\n');
+
+  return [
+    text,
+    'User supplied web pages as additional context. Use the extracted markdown below as supporting material, but prefer the user request when there is any conflict.',
+    pageContext,
+  ].join('\n\n');
 }
