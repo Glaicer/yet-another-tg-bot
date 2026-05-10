@@ -67,11 +67,25 @@ describe('parseMessage', () => {
     expect(result.type).toBe('ignored');
   });
 
-  it('returns no-op for non-command admin private message', () => {
+  it('returns admin_request for non-command admin private message', () => {
     const message = makeMessage({
       chat: makePrivateChat(BASE_CONFIG.adminUserId),
       from: makeUser(BASE_CONFIG.adminUserId),
       text: 'Hello bot',
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result).toEqual({
+      type: 'admin_request',
+      chatId: BASE_CONFIG.adminUserId,
+      userId: BASE_CONFIG.adminUserId,
+      text: 'Hello bot',
+    });
+  });
+
+  it('returns no-op for admin private message without text', () => {
+    const message = makeMessage({
+      chat: makePrivateChat(BASE_CONFIG.adminUserId),
+      from: makeUser(BASE_CONFIG.adminUserId),
     });
     const result = parseMessage(message, BASE_CONFIG);
     expect(result.type).toBe('no-op');

@@ -536,6 +536,86 @@ describe('createMessageHandler', () => {
     expect(deps.logger.logBotEvent).not.toHaveBeenCalled();
   });
 
+  it('processes admin_request through the full LLM pipeline', async () => {
+    const deps = createMockDeps();
+    const handler = createMessageHandler(deps);
+
+    await handler({
+      type: 'admin_request',
+      chatId: 12345,
+      userId: 12345,
+      text: 'Hello bot',
+    });
+
+    expect(deps.rateLimiter.check).toHaveBeenCalledWith('12345', '12345');
+    expect(deps.requestQueue.enqueue).toHaveBeenCalledTimes(1);
+    expect(deps.startTypingIndicator).toHaveBeenCalledWith({
+      api: deps.api,
+      chatId: 12345,
+      threadId: undefined,
+    });
+    expect(deps.guardrails.check).toHaveBeenCalledWith({
+      userText: 'Hello bot',
+      repliedText: undefined,
+      chatId: '12345',
+      userId: '12345',
+    });
+    expect(deps.buildPrompt).toHaveBeenCalledWith({
+      systemPrompt: deps.systemPrompt,
+      character: 'Friendly bot',
+      userText: 'Hello bot',
+      repliedText: undefined,
+    });
+    expect(deps.callLlm).toHaveBeenCalledTimes(1);
+    expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+      { api: deps.api, logger: deps.logger },
+      12345,
+      'LLM response',
+      { threadId: undefined },
+    );
+  });
+
+  it('sends rate-limit message for admin_request when rate limit exceeded', async () => {
+    const deps = createMockDeps();
+    deps.rateLimiter.check.mockReturnValue({ allowed: false, retryAfterMs: 30000 });
+    const handler = createMessageHandler(deps);
+
+    await handler({
+      type: 'admin_request',
+      chatId: 12345,
+      userId: 12345,
+      text: 'Hello',
+    });
+
+    expect(deps.requestQueue.enqueue).not.toHaveBeenCalled();
+    expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+      { api: deps.api, logger: deps.logger },
+      12345,
+      deps.config.messages.rateLimitExceeded,
+      { threadId: undefined },
+    );
+  });
+
+  it('sends error message for admin_request on LLM error', async () => {
+    const deps = createMockDeps();
+    deps.callLlm.mockRejectedValue(new Error('LLM request failed: 500'));
+    const handler = createMessageHandler(deps);
+
+    await handler({
+      type: 'admin_request',
+      chatId: 12345,
+      userId: 12345,
+      text: 'Hello',
+    });
+
+    expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+      { api: deps.api, logger: deps.logger },
+      12345,
+      deps.config.messages.llmError,
+      { threadId: undefined },
+    );
+  });
+
   it('does not log full user text in any bot event', async () => {
     const deps = createMockDeps();
     const handler = createMessageHandler(deps);

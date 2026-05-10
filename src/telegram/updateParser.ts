@@ -17,6 +17,9 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
         const { command, args } = parseCommand(message.text);
         return { type: 'admin_command', userId, command, args };
       }
+      if (message.text) {
+        return { type: 'admin_request', chatId, userId, text: message.text };
+      }
       return { type: 'no-op' };
     }
     return { type: 'ignored' };

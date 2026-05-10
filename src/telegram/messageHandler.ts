@@ -69,6 +69,10 @@ export function createMessageHandler(deps: MessageHandlerDeps): MessageHandler {
         await handleGroupRequest(deps, event);
         return;
       }
+      case 'admin_request': {
+        await handleAdminRequest(deps, event);
+        return;
+      }
       case 'group_command': {
         await handleGroupCommand(deps, event);
         return;
@@ -101,10 +105,29 @@ async function handleUnsupportedReply(
   });
 }
 
+type LlmRequestEvent = {
+  chatId: number;
+  threadId?: number;
+  userId: number;
+  text: string;
+  repliedText?: string;
+};
+
 async function handleGroupRequest(
   deps: MessageHandlerDeps,
   event: Extract<ParsedEvent, { type: 'group_request' }>,
 ): Promise<void> {
+  await handleLlmRequest(deps, event);
+}
+
+async function handleAdminRequest(
+  deps: MessageHandlerDeps,
+  event: Extract<ParsedEvent, { type: 'admin_request' }>,
+): Promise<void> {
+  await handleLlmRequest(deps, event);
+}
+
+async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent): Promise<void> {
   const { chatId, threadId, userId, text, repliedText } = event;
 
   const rateResult = deps.rateLimiter.check(String(userId), String(chatId));

@@ -31,6 +31,12 @@ export type ParsedEvent =
       args: string;
     }
   | {
+      type: 'admin_request';
+      chatId: number;
+      userId: number;
+      text: string;
+    }
+  | {
       type: 'unsupported_reply';
       chatId: number;
       threadId?: number;
