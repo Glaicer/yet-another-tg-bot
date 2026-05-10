@@ -173,6 +173,7 @@ expect(sendMessage).toHaveBeenCalledWith(...);
    only in private chat with `TELEGRAM_ADMIN_USER_ID`.
 2. **Triggers**: `@bot_username` mention, reply to bot's message, or group command (`/search`, `/help`).
    Replied context may come from user or bot message text, media captions, or Telegram quote text.
+   Forum topic service messages are ignored as reply context so topic text messages still process normally.
 3. **Typing indicator**: `sendChatAction('typing')` repeated at interval while LLM processes.
    No placeholder "Thinking..." message.
 4. **No streaming in MVP**: Wait for full LLM response, send single message.

@@ -168,6 +168,32 @@ describe('parseMessage', () => {
     }
   });
 
+  it('ignores forum topic service reply context for topic text messages', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      text: '@testbot hello',
+      message_thread_id: 42,
+      is_topic_message: true,
+      reply_to_message: makeMessage({
+        chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+        forum_topic_created: {
+          name: 'Support',
+          icon_color: 0x6fb9f0,
+        },
+      }),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result).toEqual({
+      type: 'group_request',
+      chatId: BASE_CONFIG.allowedChatId,
+      threadId: 42,
+      userId: 111,
+      text: 'hello',
+      repliedText: undefined,
+    });
+  });
+
   it('returns group_request for reply-to-bot without mention', () => {
     const message = makeMessage({
       chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),

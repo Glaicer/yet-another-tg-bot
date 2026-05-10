@@ -55,7 +55,8 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
   if (
     message.reply_to_message &&
     !extractMessageText(message.reply_to_message) &&
-    !extractQuoteText(message)
+    !extractQuoteText(message) &&
+    !isForumTopicServiceMessage(message.reply_to_message)
   ) {
     return { type: 'unsupported_reply', chatId, threadId, userId };
   }
@@ -144,6 +145,17 @@ function extractMessageText(message: Message): string | undefined {
 function extractQuoteText(message: Message): string | undefined {
   const quote = (message as { quote?: { text?: unknown } }).quote;
   return typeof quote?.text === 'string' ? quote.text : undefined;
+}
+
+function isForumTopicServiceMessage(message: Message): boolean {
+  return (
+    message.forum_topic_created !== undefined ||
+    message.forum_topic_edited !== undefined ||
+    message.forum_topic_closed !== undefined ||
+    message.forum_topic_reopened !== undefined ||
+    message.general_forum_topic_hidden !== undefined ||
+    message.general_forum_topic_unhidden !== undefined
+  );
 }
 
 function stripBotMention(text: string, config: UpdateParserConfig): string {
