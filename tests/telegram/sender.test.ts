@@ -45,6 +45,66 @@ describe('sendSafeMessage', () => {
     });
   });
 
+  it('converts common markdown bold to Telegram MarkdownV2 bold', async () => {
+    const api = createMockApi();
+    const logger = createMockLogger();
+
+    await sendSafeMessage({ api, logger }, 123, '**AIBase** reports **high** mode.');
+
+    expect(api.sendMessage).toHaveBeenCalledTimes(1);
+    expect(api.sendMessage).toHaveBeenCalledWith({
+      chat_id: 123,
+      text: '*AIBase* reports *high* mode\\.',
+      parse_mode: 'MarkdownV2',
+    });
+  });
+
+  it('converts common markdown links to Telegram MarkdownV2 links', async () => {
+    const api = createMockApi();
+    const logger = createMockLogger();
+
+    await sendSafeMessage(
+      { api, logger },
+      123,
+      '[news.aibase.com/news/27805](https://news.aibase.com/news/27805)',
+    );
+
+    expect(api.sendMessage).toHaveBeenCalledTimes(1);
+    expect(api.sendMessage).toHaveBeenCalledWith({
+      chat_id: 123,
+      text: '[news\\.aibase\\.com/news/27805](https://news.aibase.com/news/27805)',
+      parse_mode: 'MarkdownV2',
+    });
+  });
+
+  it('keeps inline code as Telegram MarkdownV2 code', async () => {
+    const api = createMockApi();
+    const logger = createMockLogger();
+
+    await sendSafeMessage({ api, logger }, 123, 'Use `console.log()` here.');
+
+    expect(api.sendMessage).toHaveBeenCalledTimes(1);
+    expect(api.sendMessage).toHaveBeenCalledWith({
+      chat_id: 123,
+      text: 'Use `console.log()` here\\.',
+      parse_mode: 'MarkdownV2',
+    });
+  });
+
+  it('preserves existing MarkdownV2 escapes in formatted output', async () => {
+    const api = createMockApi();
+    const logger = createMockLogger();
+
+    await sendSafeMessage({ api, logger }, 123, '**high**\\-режим');
+
+    expect(api.sendMessage).toHaveBeenCalledTimes(1);
+    expect(api.sendMessage).toHaveBeenCalledWith({
+      chat_id: 123,
+      text: '*high*\\-режим',
+      parse_mode: 'MarkdownV2',
+    });
+  });
+
   it('preserves message_thread_id when provided', async () => {
     const api = createMockApi();
     const logger = createMockLogger();

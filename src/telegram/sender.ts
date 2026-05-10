@@ -1,4 +1,4 @@
-import { escapeMarkdownV2 } from '../prompt/markdown.js';
+import { formatTelegramMarkdownV2 } from '../prompt/markdown.js';
 import type { BotEvent } from '../storage/logger.js';
 
 export type TelegramApi = {
@@ -35,7 +35,7 @@ export async function sendSafeMessage(
   text: string,
   options?: { threadId?: number },
 ): Promise<void> {
-  const escaped = escapeMarkdownV2(text);
+  const escaped = formatTelegramMarkdownV2(text);
   const payload: Parameters<TelegramApi['sendMessage']>[0] = {
     chat_id: chatId,
     text: escaped,

@@ -9,6 +9,4 @@ Safety rules:
 
 Formatting:
 - Use Telegram MarkdownV2 syntax.
-- Escape special MarkdownV2 characters: `_`, `*`, `[`, `]`, `(`, `)`, `~`, `` ` ``, `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`.
-- Avoid complex nested Markdown formatting.
 - Keep responses concise and engaging.
