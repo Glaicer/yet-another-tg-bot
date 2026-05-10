@@ -55,9 +55,10 @@ describe('Telegram scenarios', () => {
     expect(sentText).toContain('Got it');
 
     // Verify the LLM was called with a request containing the replied text
-    const llmCall = callLlm.mock.calls[0][0] as {
-      body: { input?: unknown[]; messages?: unknown[] };
-    };
+    const llmCall = callLlm.mock.calls.find((call) => {
+      const request = call[0] as { body?: { input?: unknown[] } };
+      return Array.isArray(request.body?.input);
+    })?.[0] as { body: { input?: unknown[]; messages?: unknown[] } };
     const messages = llmCall.body.input ?? llmCall.body.messages ?? [];
     const userMessage = messages.find((m: unknown) => (m as { role: string }).role === 'user') as
       | { content: string }
@@ -68,8 +69,9 @@ describe('Telegram scenarios', () => {
   });
 
   it('responds when user replies to bot message without mention', async () => {
+    const callLlm = vi.fn().mockResolvedValue({ text: 'Thanks for replying!' });
     const { app, captured, sendMessage } = await setupApp({
-      callLlm: vi.fn().mockResolvedValue({ text: 'Thanks for replying!' }),
+      callLlm,
     });
 
     if (!captured.handleUpdate) throw new Error('handleUpdate not captured');
@@ -87,6 +89,16 @@ describe('Telegram scenarios', () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
     const sentText = sendMessage.mock.calls[0][0].text;
     expect(sentText).toContain('Thanks for replying');
+
+    const llmCall = callLlm.mock.calls.find((call) => {
+      const request = call[0] as { body?: { input?: unknown[] } };
+      return Array.isArray(request.body?.input);
+    })?.[0] as { body: { input?: unknown[]; messages?: unknown[] } };
+    const messages = llmCall.body.input ?? llmCall.body.messages ?? [];
+    const userMessage = messages.find((m: unknown) => (m as { role: string }).role === 'user') as
+      | { content: string }
+      | undefined;
+    expect(userMessage?.content).toContain('Replied message:\nPrevious bot message');
 
     await app.stop();
   });
@@ -119,14 +131,18 @@ describe('Telegram scenarios', () => {
     expect(sentText).toMatch(/Weather\\\.com/);
 
     // Verify search prompt includes replied text
-    const llmCall = callLlm.mock.calls[0][0] as {
-      body: { input?: unknown[]; messages?: unknown[] };
-    };
+    const llmCall = callLlm.mock.calls.find((call) => {
+      const request = call[0] as { body?: { tools?: unknown[] } };
+      return Array.isArray(request.body?.tools);
+    })?.[0] as { body: { input?: unknown[]; messages?: unknown[] } };
     const messages = llmCall.body.input ?? llmCall.body.messages ?? [];
     const userMessage = messages.find((m: unknown) => (m as { role: string }).role === 'user') as
       | { content: string }
       | undefined;
     expect(userMessage?.content).toContain('The sky is blue today');
+    expect(userMessage?.content).toMatch(
+      /^Context:\nReplied message:\nThe sky is blue today\n\nUse web search/u,
+    );
 
     await app.stop();
   });

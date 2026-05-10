@@ -52,12 +52,16 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
   }
 
   // Check for unsupported replied media before dispatching
-  if (message.reply_to_message && !message.reply_to_message.text) {
+  if (
+    message.reply_to_message &&
+    !extractMessageText(message.reply_to_message) &&
+    !extractQuoteText(message)
+  ) {
     return { type: 'unsupported_reply', chatId, threadId, userId };
   }
 
   if (groupCmd) {
-    const repliedText = extractRepliedText(message, config);
+    const repliedText = extractRepliedText(message);
     return {
       type: 'group_command',
       chatId,
@@ -70,7 +74,7 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
   }
 
   const cleanedText = stripBotMention(text, config);
-  const repliedText = extractRepliedText(message, config);
+  const repliedText = extractRepliedText(message);
   return {
     type: 'group_request',
     chatId,
@@ -124,10 +128,22 @@ function isReplyToBotMessage(message: Message, config: UpdateParserConfig): bool
   return false;
 }
 
-function extractRepliedText(message: Message, config: UpdateParserConfig): string | undefined {
-  if (!message.reply_to_message) return undefined;
-  if (isReplyToBotMessage(message, config)) return undefined;
-  return message.reply_to_message.text;
+function extractRepliedText(message: Message): string | undefined {
+  if (message.reply_to_message) {
+    return extractMessageText(message.reply_to_message);
+  }
+  return extractQuoteText(message);
+}
+
+function extractMessageText(message: Message): string | undefined {
+  if (message.text) return message.text;
+  if (message.caption) return message.caption;
+  return extractQuoteText(message);
+}
+
+function extractQuoteText(message: Message): string | undefined {
+  const quote = (message as { quote?: { text?: unknown } }).quote;
+  return typeof quote?.text === 'string' ? quote.text : undefined;
 }
 
 function stripBotMention(text: string, config: UpdateParserConfig): string {

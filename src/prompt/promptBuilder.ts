@@ -39,8 +39,8 @@ export function buildPrompt(input: PromptInput): PromptMessage[] {
 
   const userParts: string[] = [];
 
+  const contextLines: string[] = [];
   if (input.context) {
-    const contextLines: string[] = [];
     if (input.context.chatTitle) {
       contextLines.push(`Chat: ${input.context.chatTitle}`);
     }
@@ -50,9 +50,14 @@ export function buildPrompt(input: PromptInput): PromptMessage[] {
     if (input.context.userName) {
       contextLines.push(`User: ${input.context.userName}`);
     }
-    if (contextLines.length > 0) {
-      userParts.push(`Context:\n${contextLines.join('\n')}`);
-    }
+  }
+
+  if (input.repliedText) {
+    contextLines.push(`Replied message:\n${input.repliedText}`);
+  }
+
+  if (contextLines.length > 0) {
+    userParts.push(`Context:\n${contextLines.join('\n')}`);
   }
 
   if (input.mode === 'search') {
@@ -60,10 +65,6 @@ export function buildPrompt(input: PromptInput): PromptMessage[] {
   }
 
   userParts.push(`User request:\n${input.userText}`);
-
-  if (input.repliedText) {
-    userParts.push(`Replied message:\n${input.repliedText}`);
-  }
 
   return [
     { role: 'system', content: systemParts.join('\n\n') },

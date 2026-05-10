@@ -70,20 +70,26 @@ describe('buildPrompt', () => {
       repliedText: 'Some message',
     };
     const messages = buildPrompt(input);
+    expect(messages[1].content).toContain('Context:');
     expect(messages[1].content).toContain('Replied message:');
     expect(messages[1].content).toContain('Some message');
   });
 
-  it('places replied text after user request', () => {
+  it('places replied text in context before search instruction and user request', () => {
     const input: PromptInput = {
       ...baseInput,
+      mode: 'search',
       userText: 'My question',
       repliedText: 'The original',
     };
     const messages = buildPrompt(input);
-    const userIdx = messages[1].content.indexOf('My question');
+    const contextIdx = messages[1].content.indexOf('Context:');
     const replyIdx = messages[1].content.indexOf('The original');
-    expect(replyIdx).toBeGreaterThan(userIdx);
+    const searchIdx = messages[1].content.toLowerCase().indexOf('web search');
+    const userIdx = messages[1].content.indexOf('My question');
+    expect(contextIdx).toBeLessThan(searchIdx);
+    expect(replyIdx).toBeLessThan(searchIdx);
+    expect(searchIdx).toBeLessThan(userIdx);
   });
 
   it('omits replied text section when not provided', () => {

@@ -183,7 +183,7 @@ describe('parseMessage', () => {
     expect(result.type).toBe('group_request');
     if (result.type === 'group_request') {
       expect(result.text).toBe('Thanks for the info');
-      expect(result.repliedText).toBeUndefined();
+      expect(result.repliedText).toBe('Here is the answer');
     }
   });
 
@@ -220,6 +220,9 @@ describe('parseMessage', () => {
     });
     const result = parseMessage(message, config);
     expect(result.type).toBe('group_request');
+    if (result.type === 'group_request') {
+      expect(result.repliedText).toBe('Previous answer');
+    }
   });
 
   it('returns group_command for command in allowed group', () => {
@@ -356,6 +359,41 @@ describe('parseMessage', () => {
     expect(result.type).toBe('group_command');
     if (result.type === 'group_command') {
       expect(result.repliedText).toBe('What is quantum computing?');
+    }
+  });
+
+  it('extracts replied caption for group command', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      text: '/search proof check this',
+      reply_to_message: makeMessage({
+        chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+        from: makeUser(222),
+        caption: 'Original caption to verify',
+      }),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result.type).toBe('group_command');
+    if (result.type === 'group_command') {
+      expect(result.repliedText).toBe('Original caption to verify');
+    }
+  });
+
+  it('extracts quoted reply text for group command when reply text is unavailable', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      text: '/search proof check this',
+      quote: {
+        text: 'Quoted part to verify',
+        position: 0,
+      },
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result.type).toBe('group_command');
+    if (result.type === 'group_command') {
+      expect(result.repliedText).toBe('Quoted part to verify');
     }
   });
 
