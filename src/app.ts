@@ -132,13 +132,6 @@ export function createApp(options?: CreateAppOptions): App {
             api: botInstance.api,
             logger,
             systemPrompt,
-            unsupportedReplyText: 'I can only work with text messages for now.',
-            rateLimitMessage: config.rateLimit.enabled
-              ? 'Rate limit exceeded. Please try again later.'
-              : '',
-            queueTimeoutMessage: 'Request timed out. Please try again later.',
-            queueFullMessage: 'The bot is too busy. Please try again later.',
-            llmErrorMessage: 'Sorry, I encountered an error. Please try again later.',
             getUptimeSeconds,
           });
 

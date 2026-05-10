@@ -174,6 +174,22 @@ logging:
     enabled: true
     logMessages: false
     redactSecrets: true
+
+messages:
+  unsupportedReply: "I can only work with text messages for now."
+  rateLimitExceeded: "Rate limit exceeded. Please try again later."
+  queueTimeout: "Request timed out. Please try again later."
+  queueFull: "The bot is too busy. Please try again later."
+  llmError: "Sorry, I encountered an error. Please try again later."
+  helpText: "How to use this bot"
+  helpSearchHint: "• Use /search <instruction> to search the web"
+  searchEmptyArgs: "Please provide a search instruction: /search <instruction>"
+  personasAvailable: "Available personas:\\n\\n{list}"
+  personasEmpty: "No personas available."
+  personaMissingName: "Please provide a persona name: /persona <name>"
+  personaUnknown: "Unknown persona: {name}. Use /personas to see available personas."
+  personaChanged: "Persona changed to: {name}"
+  statusTitle: "Status"
 `;
 }
 

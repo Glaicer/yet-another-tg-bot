@@ -46,11 +46,6 @@ export type SearchCommandDeps = {
   rateLimiter: RateLimiter;
   requestQueue: RequestQueue;
   systemPrompt: string;
-  unsupportedReplyText: string;
-  rateLimitMessage: string;
-  queueTimeoutMessage: string;
-  queueFullMessage: string;
-  llmErrorMessage: string;
 };
 
 export async function handleSearch(
@@ -68,7 +63,7 @@ export async function handleSearch(
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
       chatId,
-      'Please provide a search instruction: /search <instruction>',
+      deps.config.messages.searchEmptyArgs,
       { threadId },
     );
     deps.logger.logBotEvent({
@@ -84,7 +79,7 @@ export async function handleSearch(
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
       chatId,
-      deps.rateLimitMessage,
+      deps.config.messages.rateLimitExceeded,
       { threadId },
     );
     deps.logger.logBotEvent({
@@ -110,7 +105,7 @@ export async function handleSearch(
         await deps.sendSafeMessage(
           { api: deps.api, logger: deps.logger },
           chatId,
-          guardrailsResult.reason || deps.llmErrorMessage,
+          guardrailsResult.reason || deps.config.messages.llmError,
           { threadId },
         );
         return;
@@ -152,7 +147,7 @@ export async function handleSearch(
       await deps.sendSafeMessage(
         { api: deps.api, logger: deps.logger },
         chatId,
-        deps.llmErrorMessage,
+        deps.config.messages.llmError,
         { threadId },
       );
       deps.logger.logBotEvent({
@@ -171,7 +166,7 @@ export async function handleSearch(
       await deps.sendSafeMessage(
         { api: deps.api, logger: deps.logger },
         chatId,
-        deps.queueTimeoutMessage,
+        deps.config.messages.queueTimeout,
         { threadId },
       );
       deps.logger.logBotEvent({

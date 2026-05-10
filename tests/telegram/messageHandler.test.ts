@@ -9,6 +9,24 @@ import {
 import type { ParsedEvent } from '../../src/telegram/types.js';
 
 function createMockDeps(): MessageHandlerDeps {
+  const messages = {
+    unsupportedReply: 'I can only work with text messages for now.',
+    rateLimitExceeded: 'Rate limit exceeded. Please try again later.',
+    queueTimeout: 'Request timed out. Please try again later.',
+    queueFull: 'The bot is too busy. Please try again later.',
+    llmError: 'Sorry, I encountered an error. Please try again later.',
+    helpText:
+      "How to use this bot:\n\n• Mention me with @username to ask a question\n• Reply to one of my messages without a mention\n• Reply to another user's text message while mentioning me to include their message in context",
+    helpSearchHint: '• Use /search <instruction> to search the web',
+    searchEmptyArgs: 'Please provide a search instruction: /search <instruction>',
+    personasAvailable: 'Available personas:\n\n{list}',
+    personasEmpty: 'No personas available.',
+    personaMissingName: 'Please provide a persona name: /persona <name>',
+    personaUnknown: 'Unknown persona: {name}. Use /personas to see available personas.',
+    personaChanged: 'Persona changed to: {name}',
+    statusTitle: 'Status',
+  };
+
   return {
     config: {
       llm: {
@@ -20,6 +38,7 @@ function createMockDeps(): MessageHandlerDeps {
       timeouts: {
         llmRequestMs: 5000,
       },
+      messages,
     } as ResolvedConfig,
     rateLimiter: {
       check: vi.fn().mockReturnValue({ allowed: true }),
@@ -63,11 +82,6 @@ function createMockDeps(): MessageHandlerDeps {
       logGuardrailEvent: vi.fn(),
     },
     systemPrompt: 'You are a helpful assistant.',
-    unsupportedReplyText: 'I can only work with text messages for now.',
-    rateLimitMessage: 'Rate limit exceeded. Please try again later.',
-    queueTimeoutMessage: 'Request timed out. Please try again later.',
-    queueFullMessage: 'The bot is too busy. Please try again later.',
-    llmErrorMessage: 'Sorry, I encountered an error. Please try again later.',
     getUptimeSeconds: vi.fn().mockReturnValue(42),
   } as unknown as MessageHandlerDeps;
 }
@@ -150,7 +164,7 @@ describe('createMessageHandler', () => {
     expect(deps.sendSafeMessage).toHaveBeenCalledWith(
       { api: deps.api, logger: deps.logger },
       -1001234567890,
-      deps.unsupportedReplyText,
+      deps.config.messages.unsupportedReply,
       { threadId: 7 },
     );
 
@@ -299,7 +313,7 @@ describe('createMessageHandler', () => {
     expect(deps.sendSafeMessage).toHaveBeenCalledWith(
       { api: deps.api, logger: deps.logger },
       -1001234567890,
-      deps.rateLimitMessage,
+      deps.config.messages.rateLimitExceeded,
       { threadId: undefined },
     );
 
@@ -353,7 +367,7 @@ describe('createMessageHandler', () => {
     expect(deps.sendSafeMessage).toHaveBeenCalledWith(
       { api: deps.api, logger: deps.logger },
       -1001234567890,
-      deps.llmErrorMessage,
+      deps.config.messages.llmError,
       { threadId: undefined },
     );
 
@@ -374,7 +388,7 @@ describe('createMessageHandler', () => {
     expect(deps.sendSafeMessage).toHaveBeenCalledWith(
       { api: deps.api, logger: deps.logger },
       -1001234567890,
-      deps.llmErrorMessage,
+      deps.config.messages.llmError,
       { threadId: undefined },
     );
 
@@ -397,7 +411,7 @@ describe('createMessageHandler', () => {
     expect(deps.sendSafeMessage).toHaveBeenCalledWith(
       { api: deps.api, logger: deps.logger },
       -1001234567890,
-      deps.queueTimeoutMessage,
+      deps.config.messages.queueTimeout,
       { threadId: undefined },
     );
 

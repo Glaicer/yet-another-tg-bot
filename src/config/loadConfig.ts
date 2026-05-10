@@ -156,6 +156,7 @@ export function loadConfig(options: LoadConfigOptions): ResolvedConfig {
     timeouts: raw.timeouts,
     commands: raw.commands,
     logging: raw.logging,
+    messages: raw.messages,
     secrets: {
       telegramBotToken: requireEnv('TELEGRAM_BOT_TOKEN'),
     },

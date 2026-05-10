@@ -19,7 +19,7 @@ Dev deps: `vitest`, `tsx`, `@biomejs/biome`.
 # Copy env template and fill in real values
 cp .env.template .env
 # Copy example config
-cp config/examples/config.example.yaml config/production/config.yaml
+cp config/examples/config.yaml config/production/config.yaml
 # Create characters directory
 cp -r config/examples/characters config/production/characters
 cp -r config/examples/prompts config/production/prompts
@@ -66,8 +66,8 @@ src/
 │   ├── bot.ts            # createBot() — polling/webhook, command registration
 │   ├── updateParser.ts   # parseMessage() → ParsedEvent (mention/reply/command detection)
 │   ├── messageHandler.ts # createMessageHandler() — orchestrates guardrails→LLM→send
-│   ├── commands.ts       # /help, /search, /status, /personas, /persona
-│   ├── searchCommand.ts  # /search web search logic
+│   ├── commands.ts       # /help, /search, /status, /personas, /persona (texts from config.messages)
+│   ├── searchCommand.ts  # /search web search logic (texts from config.messages)
 │   ├── sender.ts         # sendSafeMessage() — sends with MarkdownV2+fallback
 │   ├── typingIndicator.ts# startTypingIndicator() — repeats sendChatAction
 │   └── types.ts          # ParsedEvent union type
@@ -151,6 +151,8 @@ expect(sendMessage).toHaveBeenCalledWith(...);
 - `config/examples/` — example config, characters, and prompts.
 - Config fields reference env var names (e.g., `apiKeyEnv: MAIN_LLM_API_KEY`), never inline secrets.
 - Config supports `providers` section for multi-provider detection (openai, openrouter, opencode_go, ollama_cloud).
+- Config `messages` section defines all user-facing reply texts (errors, help, status, personas, etc.).
+  Templates use `{name}` and `{list}` placeholders. No hardcoded reply strings in source code.
 
 ## Docker
 

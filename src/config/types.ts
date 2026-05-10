@@ -110,6 +110,22 @@ export type ResolvedConfig = {
       redactSecrets: boolean;
     };
   };
+  messages: {
+    unsupportedReply: string;
+    rateLimitExceeded: string;
+    queueTimeout: string;
+    queueFull: string;
+    llmError: string;
+    helpText: string;
+    helpSearchHint: string;
+    searchEmptyArgs: string;
+    personasAvailable: string;
+    personasEmpty: string;
+    personaMissingName: string;
+    personaUnknown: string;
+    personaChanged: string;
+    statusTitle: string;
+  };
   secrets: {
     telegramBotToken: string;
   };

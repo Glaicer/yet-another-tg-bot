@@ -49,11 +49,6 @@ export type MessageHandlerDeps = {
   api: Api;
   logger: LoggerLike;
   systemPrompt: string;
-  unsupportedReplyText: string;
-  rateLimitMessage: string;
-  queueTimeoutMessage: string;
-  queueFullMessage: string;
-  llmErrorMessage: string;
   getUptimeSeconds: () => number;
 };
 
@@ -96,7 +91,7 @@ async function handleUnsupportedReply(
   await deps.sendSafeMessage(
     { api: deps.api, logger: deps.logger },
     event.chatId,
-    deps.unsupportedReplyText,
+    deps.config.messages.unsupportedReply,
     { threadId: event.threadId },
   );
   deps.logger.logBotEvent({
@@ -117,7 +112,7 @@ async function handleGroupRequest(
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
       chatId,
-      deps.rateLimitMessage,
+      deps.config.messages.rateLimitExceeded,
       { threadId },
     );
     deps.logger.logBotEvent({
@@ -143,7 +138,7 @@ async function handleGroupRequest(
         await deps.sendSafeMessage(
           { api: deps.api, logger: deps.logger },
           chatId,
-          guardrailsResult.reason || deps.llmErrorMessage,
+          guardrailsResult.reason || deps.config.messages.llmError,
           { threadId },
         );
         return;
@@ -181,7 +176,7 @@ async function handleGroupRequest(
       await deps.sendSafeMessage(
         { api: deps.api, logger: deps.logger },
         chatId,
-        deps.llmErrorMessage,
+        deps.config.messages.llmError,
         { threadId },
       );
       deps.logger.logBotEvent({
@@ -200,7 +195,7 @@ async function handleGroupRequest(
       await deps.sendSafeMessage(
         { api: deps.api, logger: deps.logger },
         chatId,
-        deps.queueTimeoutMessage,
+        deps.config.messages.queueTimeout,
         { threadId },
       );
       deps.logger.logBotEvent({

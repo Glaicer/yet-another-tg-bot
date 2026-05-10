@@ -60,21 +60,37 @@ export async function handleAdminCommand(
   }
 }
 
+function formatStatus(deps: CommandDeps): string {
+  const character = deps.characterStore.getCurrentCharacter();
+  const uptime = deps.getUptimeSeconds();
+  const { config } = deps;
+
+  const lines = [
+    config.messages.statusTitle,
+    '',
+    `Provider: ${config.llm.provider}`,
+    `Model: ${config.llm.model}`,
+    `API mode: ${config.llm.apiMode}`,
+    `Character: ${character.name}`,
+    `Guardrails: ${config.guardrails.enabled ? 'enabled' : 'disabled'}`,
+    `Telegram mode: ${config.telegram.mode}`,
+    `Web search: ${config.llm.supportsWebSearch ? 'available' : 'unavailable'}`,
+    `SQLite: ${config.storage.databasePath}`,
+    `Uptime: ${formatUptime(uptime)}`,
+  ];
+
+  return lines.join('\n');
+}
+
 async function handleHelp(
   deps: CommandDeps,
   event: Extract<ParsedEvent, { type: 'group_command' }>,
 ): Promise<void> {
-  const lines = [
-    'How to use this bot:',
-    '',
-    '• Mention me with @username to ask a question',
-    '• Reply to one of my messages without a mention',
-    "• Reply to another user's text message while mentioning me to include their message in context",
-  ];
+  const lines = [deps.config.messages.helpText];
 
   if (deps.config.llm.supportsWebSearch) {
     lines.push('');
-    lines.push('• Use /search <instruction> to search the web');
+    lines.push(deps.config.messages.helpSearchHint);
   }
 
   const text = lines.join('\n');
@@ -94,24 +110,7 @@ async function handleStatus(
   deps: CommandDeps,
   event: Extract<ParsedEvent, { type: 'admin_command' }>,
 ): Promise<void> {
-  const character = deps.characterStore.getCurrentCharacter();
-  const uptime = deps.getUptimeSeconds();
-
-  const lines = [
-    'Status',
-    '',
-    `Provider: ${deps.config.llm.provider}`,
-    `Model: ${deps.config.llm.model}`,
-    `API mode: ${deps.config.llm.apiMode}`,
-    `Character: ${character.name}`,
-    `Guardrails: ${deps.config.guardrails.enabled ? 'enabled' : 'disabled'}`,
-    `Telegram mode: ${deps.config.telegram.mode}`,
-    `Web search: ${deps.config.llm.supportsWebSearch ? 'available' : 'unavailable'}`,
-    `SQLite: ${deps.config.storage.databasePath}`,
-    `Uptime: ${formatUptime(uptime)}`,
-  ];
-
-  const text = lines.join('\n');
+  const text = formatStatus(deps);
 
   await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, event.userId, text);
 
@@ -128,8 +127,11 @@ async function handlePersonas(
   const names = deps.characterStore.listCharacters();
   const text =
     names.length > 0
-      ? `Available personas:\n\n${names.map((n) => `• ${n}`).join('\n')}`
-      : 'No personas available.';
+      ? deps.config.messages.personasAvailable.replace(
+          '{list}',
+          names.map((n) => `• ${n}`).join('\n'),
+        )
+      : deps.config.messages.personasEmpty;
 
   await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, event.userId, text);
 
@@ -148,7 +150,7 @@ async function handlePersona(
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
       event.userId,
-      'Please provide a persona name: /persona <name>',
+      deps.config.messages.personaMissingName,
     );
     return;
   }
@@ -158,7 +160,7 @@ async function handlePersona(
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
       event.userId,
-      `Unknown persona: ${name}. Use /personas to see available personas.`,
+      deps.config.messages.personaUnknown.replace('{name}', name),
     );
     deps.logger.logBotEvent({
       type: 'command_persona_rejected',
@@ -171,7 +173,7 @@ async function handlePersona(
   await deps.sendSafeMessage(
     { api: deps.api, logger: deps.logger },
     event.userId,
-    `Persona changed to: ${name}`,
+    deps.config.messages.personaChanged.replace('{name}', name),
   );
 
   deps.logger.logBotEvent({

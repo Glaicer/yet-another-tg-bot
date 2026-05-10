@@ -134,6 +134,22 @@ export const rawConfigSchema = z.object({
       redactSecrets: z.boolean(),
     }),
   }),
+  messages: z.object({
+    unsupportedReply: z.string().min(1),
+    rateLimitExceeded: z.string().min(1),
+    queueTimeout: z.string().min(1),
+    queueFull: z.string().min(1),
+    llmError: z.string().min(1),
+    helpText: z.string().min(1),
+    helpSearchHint: z.string().min(1),
+    searchEmptyArgs: z.string().min(1),
+    personasAvailable: z.string().min(1),
+    personasEmpty: z.string().min(1),
+    personaMissingName: z.string().min(1),
+    personaUnknown: z.string().min(1),
+    personaChanged: z.string().min(1),
+    statusTitle: z.string().min(1),
+  }),
 });
 
 export type RawConfig = z.infer<typeof rawConfigSchema>;
