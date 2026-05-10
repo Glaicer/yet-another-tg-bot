@@ -30,7 +30,14 @@ export type GrammYBotLike = {
   stop(): Promise<void>;
   api: {
     getMe(): Promise<{ id: number; username?: string }>;
-    setMyCommands(commands: Array<{ command: string; description: string }>): Promise<unknown>;
+    setMyCommands(
+      commands: Array<{ command: string; description: string }>,
+      options?: {
+        scope: {
+          type: 'all_group_chats' | 'all_private_chats';
+        };
+      },
+    ): Promise<unknown>;
     sendMessage(chatId: number, text: string, options?: Record<string, unknown>): Promise<unknown>;
     sendChatAction(
       chatId: number,
@@ -92,12 +99,17 @@ export async function createBot(deps: CreateBotDeps): Promise<BotInstance> {
   });
 
   if (deps.commands.registerOnStartup) {
-    const commands = [...deps.commands.group, ...deps.commands.adminPrivate]
+    const groupCommands = deps.commands.group
       .filter((c) => c.command !== 'search' || deps.supportsWebSearch)
       .map((c) => ({ command: c.command, description: c.description }));
+    const adminPrivateCommands = deps.commands.adminPrivate.map((c) => ({
+      command: c.command,
+      description: c.description,
+    }));
 
     try {
-      await bot.api.setMyCommands(commands);
+      await bot.api.setMyCommands(groupCommands, { scope: { type: 'all_group_chats' } });
+      await bot.api.setMyCommands(adminPrivateCommands, { scope: { type: 'all_private_chats' } });
     } catch (error) {
       deps.logger.warn(
         `Command registration failed: ${error instanceof Error ? error.message : String(error)}`,

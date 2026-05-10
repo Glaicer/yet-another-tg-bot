@@ -57,19 +57,25 @@ describe('createBot', () => {
     expect(instance.botId).toBe(123);
   });
 
-  it('registers all commands on startup when enabled', async () => {
+  it('registers group and admin private commands in separate scopes on startup', async () => {
     const { deps, mockBot } = createDeps();
     await createBot(deps);
-    expect(mockBot.api.setMyCommands).toHaveBeenCalledTimes(1);
-    const commands = (mockBot.api.setMyCommands as ReturnType<typeof vi.fn>).mock
-      .calls[0][0] as Array<{
+    expect(mockBot.api.setMyCommands).toHaveBeenCalledTimes(2);
+
+    const calls = (mockBot.api.setMyCommands as ReturnType<typeof vi.fn>).mock.calls;
+    const groupCommands = calls[0][0] as Array<{
       command: string;
       description: string;
     }>;
-    expect(commands).toHaveLength(5);
-    expect(commands.map((c) => c.command)).toContain('help');
-    expect(commands.map((c) => c.command)).toContain('search');
-    expect(commands.map((c) => c.command)).toContain('status');
+    const privateCommands = calls[1][0] as Array<{
+      command: string;
+      description: string;
+    }>;
+
+    expect(calls[0][1]).toEqual({ scope: { type: 'all_group_chats' } });
+    expect(calls[1][1]).toEqual({ scope: { type: 'all_private_chats' } });
+    expect(groupCommands.map((c) => c.command)).toEqual(['help', 'search']);
+    expect(privateCommands.map((c) => c.command)).toEqual(['status', 'personas', 'persona']);
   });
 
   it('excludes /search from registered commands when web search is unavailable', async () => {
