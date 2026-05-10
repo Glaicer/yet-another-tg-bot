@@ -117,10 +117,70 @@ describe('parseMessage', () => {
     expect(result.type).toBe('no-op');
   });
 
-  it('returns no-op for group message without text', () => {
+  it('returns no-op for group message without text or caption', () => {
     const message = makeMessage({
       chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
       from: makeUser(111),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result.type).toBe('no-op');
+  });
+
+  it('returns unsupported_reply for image reply to bot without caption', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      reply_to_message: makeMessage({
+        chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+        from: makeBotUser(BASE_CONFIG.botId ?? 999, BASE_CONFIG.botUsername),
+        text: 'Previous answer',
+      }),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result.type).toBe('unsupported_reply');
+    if (result.type === 'unsupported_reply') {
+      expect(result.chatId).toBe(BASE_CONFIG.allowedChatId);
+      expect(result.userId).toBe(111);
+    }
+  });
+
+  it('returns unsupported_reply for image with caption mentioning bot', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      caption: '@testbot what do you think?',
+      photo: [{ file_id: 'abc', file_unique_id: 'def', width: 100, height: 100 }],
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result.type).toBe('unsupported_reply');
+    if (result.type === 'unsupported_reply') {
+      expect(result.chatId).toBe(BASE_CONFIG.allowedChatId);
+      expect(result.userId).toBe(111);
+    }
+  });
+
+  it('returns unsupported_reply for image with caption replying to bot', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      caption: 'Nice one',
+      photo: [{ file_id: 'abc', file_unique_id: 'def', width: 100, height: 100 }],
+      reply_to_message: makeMessage({
+        chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+        from: makeBotUser(BASE_CONFIG.botId ?? 999, BASE_CONFIG.botUsername),
+        text: 'Previous answer',
+      }),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result.type).toBe('unsupported_reply');
+  });
+
+  it('returns no-op for image with caption not mentioning bot', () => {
+    const message = makeMessage({
+      chat: makeSupergroupChat(BASE_CONFIG.allowedChatId),
+      from: makeUser(111),
+      caption: 'Just a photo',
+      photo: [{ file_id: 'abc', file_unique_id: 'def', width: 100, height: 100 }],
     });
     const result = parseMessage(message, BASE_CONFIG);
     expect(result.type).toBe('no-op');

@@ -27,12 +27,17 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
     return { type: 'ignored' };
   }
 
-  // Allowed group but no text
-  if (!message.text) {
+  const text = message.text ?? message.caption;
+
+  // Allowed group but no text and no caption — unsupported media
+  if (!text) {
+    const isReplyToBot = isReplyToBotMessage(message, config);
+    if (isReplyToBot) {
+      return { type: 'unsupported_reply', chatId, threadId, userId };
+    }
     return { type: 'no-op' };
   }
 
-  const text = message.text;
   const strippedText = stripBotMention(text, config);
 
   // Check group command
@@ -49,6 +54,11 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
 
   if (!isInvoked) {
     return { type: 'no-op' };
+  }
+
+  // Media message with caption — unsupported
+  if (!message.text && message.caption) {
+    return { type: 'unsupported_reply', chatId, threadId, userId };
   }
 
   // Check for unsupported replied media before dispatching
