@@ -187,10 +187,12 @@ expect(sendMessage).toHaveBeenCalledWith(...);
 4. **Typing indicator**: `sendChatAction('typing')` repeated at interval while LLM processes.
    No placeholder "Thinking..." message.
 5. **No streaming in MVP**: Wait for full LLM response, send single message.
-6. **MarkdownV2**: Telegram MarkdownV2 formatting. Fallback to plain text on parse error.
-7. **Rate limiting**: Per-user + per-chat sliding window. Queue with bounded concurrency + timeout.
-8. **Guardrails**: Input checking via external LLM. Fail-open on provider error. Output is NOT checked.
-9. **SQLite logging**: Events logged with secrets redacted. Full user message text is NOT stored.
+6. **Prompt timestamp**: The final system message ends with current local date and time in
+   `YYYY-MM-DD HH:mm` format.
+7. **MarkdownV2**: Telegram MarkdownV2 formatting. Fallback to plain text on parse error.
+8. **Rate limiting**: Per-user + per-chat sliding window. Queue with bounded concurrency + timeout.
+9. **Guardrails**: Input checking via external LLM. Fail-open on provider error. Output is NOT checked.
+10. **SQLite logging**: Events logged with secrets redacted. Full user message text is NOT stored.
    SHA256 hash is stored for audit traceability instead.
-10. **Failure diagnostics**: Runtime failures are written through `logConsoleEvent()`, which emits a
+11. **Failure diagnostics**: Runtime failures are written through `logConsoleEvent()`, which emits a
     `console.log` line and inserts the same redacted failure record into SQLite `console_events`.

@@ -11,6 +11,7 @@ export type PromptInput = {
   repliedText?: string;
   context?: PromptContext;
   mode?: 'normal' | 'search';
+  now?: Date;
 };
 
 export type PromptMessage = {
@@ -36,6 +37,8 @@ export function buildPrompt(input: PromptInput): PromptMessage[] {
   if (input.character) {
     systemParts.push(`Character:\n${input.character}`);
   }
+
+  systemParts.push(`Current date and time: ${formatDateTime(input.now ?? new Date())}`);
 
   const userParts: string[] = [];
 
@@ -70,4 +73,13 @@ export function buildPrompt(input: PromptInput): PromptMessage[] {
     { role: 'system', content: systemParts.join('\n\n') },
     { role: 'user', content: userParts.join('\n\n') },
   ];
+}
+
+function formatDateTime(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
 }

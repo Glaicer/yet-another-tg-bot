@@ -47,6 +47,14 @@ describe('buildPrompt', () => {
     expect(safetyIdx).toBeLessThan(charIdx);
   });
 
+  it('appends current date and time at the end of the system message', () => {
+    const messages = buildPrompt({
+      ...baseInput,
+      now: new Date(2026, 4, 11, 9, 7),
+    });
+    expect(messages[0].content).toMatch(/Current date and time: 2026-05-11 09:07$/);
+  });
+
   it('includes user request in user message', () => {
     const messages = buildPrompt(baseInput);
     expect(messages[1].content).toContain('User request:');
