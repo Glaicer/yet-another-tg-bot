@@ -11,9 +11,7 @@ export type LoadConfigOptions = {
 };
 
 export function loadConfig(options: LoadConfigOptions): ResolvedConfig {
-  if (options.envPath) {
-    loadEnv(options.envPath);
-  }
+  loadEnv(options.envPath);
 
   if (!fs.existsSync(options.configPath)) {
     throw new Error(`Config file does not exist: ${options.configPath}`);
