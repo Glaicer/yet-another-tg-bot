@@ -130,6 +130,8 @@ function buildGuardrailsUserContent(input: GuardrailsInput): string {
   return content;
 }
 
+const GUARDRAIL_UNSAFE_THRESHOLD = 0.7;
+
 function parseGuardrailsResponse(text: string): { verdict: string; reason?: string } {
   try {
     const json = JSON.parse(text) as Record<string, unknown>;
@@ -140,7 +142,29 @@ function parseGuardrailsResponse(text: string): { verdict: string; reason?: stri
       };
     }
   } catch {
-    // ignore parse errors
+    // not JSON — try plain-text or numeric format
   }
+
+  const normalized = text.trim().toLowerCase();
+
+  const numeric = Number(normalized);
+  if (!Number.isNaN(numeric) && numeric >= 0 && numeric <= 1) {
+    return {
+      verdict: numeric >= GUARDRAIL_UNSAFE_THRESHOLD ? 'unsafe' : 'safe',
+      reason: `score: ${numeric}`,
+    };
+  }
+
+  if (normalized.startsWith('unsafe')) {
+    const lines = text.trim().split('\n');
+    return {
+      verdict: 'unsafe',
+      reason: lines.length > 1 ? lines.slice(1).join(', ').trim() : undefined,
+    };
+  }
+  if (normalized === 'safe') {
+    return { verdict: 'safe' };
+  }
+
   return { verdict: 'safe' };
 }

@@ -265,7 +265,30 @@ describe('guardrailsService', () => {
     expect(callLlm).not.toHaveBeenCalled();
   });
 
-  it('handles non-JSON response by treating as safe', async () => {
+  it('blocks on Llama Guard plain-text unsafe response', async () => {
+    const callLlm = vi.fn().mockResolvedValue({
+      text: 'unsafe\nS14',
+    } as LlmResponse);
+
+    const service = createGuardrailsService(makeConfig(), logger, callLlm);
+    const result = await service.check({ userText: 'Something bad' });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toBe("I can't help with that request.");
+  });
+
+  it('allows on Llama Guard plain-text safe response', async () => {
+    const callLlm = vi.fn().mockResolvedValue({
+      text: 'safe',
+    } as LlmResponse);
+
+    const service = createGuardrailsService(makeConfig(), logger, callLlm);
+    const result = await service.check({ userText: 'Hello' });
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('allows on truly unparseable response', async () => {
     const callLlm = vi.fn().mockResolvedValue({
       text: 'This looks fine to me',
     } as LlmResponse);
@@ -276,10 +299,35 @@ describe('guardrailsService', () => {
     expect(result.allowed).toBe(true);
   });
 
-  it('allows on malformed JSON response', async () => {
-    const callLlm = vi.fn().mockResolvedValue({
-      text: '{"verdict": unsafe}',
-    } as LlmResponse);
+  it('blocks on numeric score >= 0.7', async () => {
+    const callLlm = vi.fn().mockResolvedValue({ text: '0.85' } as LlmResponse);
+
+    const service = createGuardrailsService(makeConfig(), logger, callLlm);
+    const result = await service.check({ userText: 'Something bad' });
+
+    expect(result.allowed).toBe(false);
+  });
+
+  it('blocks on numeric score exactly 0.7', async () => {
+    const callLlm = vi.fn().mockResolvedValue({ text: '0.7' } as LlmResponse);
+
+    const service = createGuardrailsService(makeConfig(), logger, callLlm);
+    const result = await service.check({ userText: 'Something bad' });
+
+    expect(result.allowed).toBe(false);
+  });
+
+  it('allows on numeric score below 0.7', async () => {
+    const callLlm = vi.fn().mockResolvedValue({ text: '0.3' } as LlmResponse);
+
+    const service = createGuardrailsService(makeConfig(), logger, callLlm);
+    const result = await service.check({ userText: 'Hello' });
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('allows on numeric score 0', async () => {
+    const callLlm = vi.fn().mockResolvedValue({ text: '0' } as LlmResponse);
 
     const service = createGuardrailsService(makeConfig(), logger, callLlm);
     const result = await service.check({ userText: 'Hello' });
