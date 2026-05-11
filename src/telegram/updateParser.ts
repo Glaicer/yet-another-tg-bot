@@ -12,12 +12,26 @@ export function parseMessage(message: Message, config: UpdateParserConfig): Pars
       return { type: 'no-op' };
     }
     if (userId === config.adminUserId) {
+      const repliedText = extractRepliedText(message);
       if (message.text && isCommand(message.text)) {
         const { command, args } = parseCommand(message.text);
-        return { type: 'admin_command', userId, command, args };
+        return {
+          type: 'admin_command',
+          chatId,
+          userId,
+          command,
+          args,
+          ...(repliedText !== undefined ? { repliedText } : {}),
+        };
       }
       if (message.text) {
-        return { type: 'admin_request', chatId, userId, text: message.text };
+        return {
+          type: 'admin_request',
+          chatId,
+          userId,
+          text: message.text,
+          ...(repliedText !== undefined ? { repliedText } : {}),
+        };
       }
       return { type: 'no-op' };
     }

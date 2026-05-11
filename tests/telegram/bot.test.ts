@@ -75,18 +75,23 @@ describe('createBot', () => {
     expect(calls[0][1]).toEqual({ scope: { type: 'all_group_chats' } });
     expect(calls[1][1]).toEqual({ scope: { type: 'all_private_chats' } });
     expect(groupCommands.map((c) => c.command)).toEqual(['help', 'search']);
-    expect(privateCommands.map((c) => c.command)).toEqual(['status', 'personas', 'persona']);
+    expect(privateCommands.map((c) => c.command)).toEqual([
+      'status',
+      'personas',
+      'persona',
+      'search',
+    ]);
   });
 
   it('excludes /search from registered commands when web search is unavailable', async () => {
     const { deps, mockBot } = createDeps({ supportsWebSearch: false });
     await createBot(deps);
-    const commands = (mockBot.api.setMyCommands as ReturnType<typeof vi.fn>).mock
-      .calls[0][0] as Array<{
-      command: string;
-    }>;
-    expect(commands.some((c) => c.command === 'search')).toBe(false);
-    expect(commands.some((c) => c.command === 'help')).toBe(true);
+    const calls = (mockBot.api.setMyCommands as ReturnType<typeof vi.fn>).mock.calls;
+    const groupCommands = calls[0][0] as Array<{ command: string }>;
+    const privateCommands = calls[1][0] as Array<{ command: string }>;
+    expect(groupCommands.some((c) => c.command === 'search')).toBe(false);
+    expect(groupCommands.some((c) => c.command === 'help')).toBe(true);
+    expect(privateCommands.some((c) => c.command === 'search')).toBe(false);
   });
 
   it('logs warning and does not crash when command registration fails', async () => {

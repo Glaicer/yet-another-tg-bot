@@ -223,6 +223,7 @@ describe('handleAdminCommand', () => {
     const deps = createMockDeps();
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'status',
       args: '',
@@ -257,6 +258,7 @@ describe('handleAdminCommand', () => {
     (deps.config as Record<string, unknown>).secrets = { telegramBotToken: 'token-secret' };
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'status',
       args: '',
@@ -273,6 +275,7 @@ describe('handleAdminCommand', () => {
     const deps = createMockDeps();
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'personas',
       args: '',
@@ -296,6 +299,7 @@ describe('handleAdminCommand', () => {
     deps.characterStore.selectCharacter.mockReturnValue(true);
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'persona',
       args: 'sassy',
@@ -323,6 +327,7 @@ describe('handleAdminCommand', () => {
     deps.characterStore.selectCharacter.mockReturnValue(false);
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'persona',
       args: 'nonexistent',
@@ -349,6 +354,7 @@ describe('handleAdminCommand', () => {
     const deps = createMockDeps();
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'persona',
       args: '',
@@ -368,6 +374,7 @@ describe('handleAdminCommand', () => {
     const deps = createMockDeps();
     const event = {
       type: 'admin_command' as const,
+      chatId: 12345,
       userId: 12345,
       command: 'unknown',
       args: '',

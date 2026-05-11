@@ -263,24 +263,43 @@ export function makeGroupMessage(overrides: {
 export function makePrivateMessage(overrides: {
   userId?: number;
   text?: string;
+  replyToMessage?: {
+    message_id: number;
+    from?: { id: number; username?: string; is_bot?: boolean };
+    text?: string;
+    caption?: string;
+  };
 }): Update {
   const userId = overrides.userId ?? ADMIN_USER_ID;
 
+  const message = {
+    message_id: 1,
+    date: Math.floor(Date.now() / 1000),
+    chat: {
+      id: userId,
+      type: 'private',
+    },
+    from: {
+      id: userId,
+      is_bot: false,
+      first_name: 'Admin',
+    },
+    text: overrides.text ?? '/status',
+  } as {
+    message_id: number;
+    date: number;
+    chat: { id: number; type: 'private' };
+    from: { id: number; is_bot: false; first_name: string };
+    text: string;
+    reply_to_message?: unknown;
+  };
+
+  if (overrides.replyToMessage) {
+    message.reply_to_message = overrides.replyToMessage;
+  }
+
   return {
     update_id: 1,
-    message: {
-      message_id: 1,
-      date: Math.floor(Date.now() / 1000),
-      chat: {
-        id: userId,
-        type: 'private',
-      },
-      from: {
-        id: userId,
-        is_bot: false,
-        first_name: 'Admin',
-      },
-      text: overrides.text ?? '/status',
-    } as never,
+    message: message as never,
   };
 }

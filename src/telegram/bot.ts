@@ -102,10 +102,16 @@ export async function createBot(deps: CreateBotDeps): Promise<BotInstance> {
     const groupCommands = deps.commands.group
       .filter((c) => c.command !== 'search' || deps.supportsWebSearch)
       .map((c) => ({ command: c.command, description: c.description }));
-    const adminPrivateCommands = deps.commands.adminPrivate.map((c) => ({
-      command: c.command,
-      description: c.description,
-    }));
+    const adminPrivateCommands = deps.commands.adminPrivate
+      .concat(deps.commands.group.filter((c) => c.command === 'search'))
+      .filter((c) => c.command !== 'search' || deps.supportsWebSearch)
+      .filter((command, index, commands) => {
+        return commands.findIndex((candidate) => candidate.command === command.command) === index;
+      })
+      .map((c) => ({
+        command: c.command,
+        description: c.description,
+      }));
 
     try {
       await bot.api.setMyCommands(groupCommands, { scope: { type: 'all_group_chats' } });

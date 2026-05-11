@@ -147,6 +147,46 @@ describe('Telegram scenarios', () => {
     await app.stop();
   });
 
+  it('processes private admin /search with replied bot message context', async () => {
+    const callLlm = vi.fn().mockResolvedValue({
+      text: 'Confirmed.',
+      sources: [{ title: 'Example', url: 'https://example.com' }],
+    });
+    const { app, captured, sendMessage } = await setupApp({
+      callLlm,
+    });
+
+    if (!captured.handleUpdate) throw new Error('handleUpdate not captured');
+    await captured.handleUpdate(
+      makePrivateMessage({
+        text: '/search verify this',
+        replyToMessage: {
+          message_id: 10,
+          from: { id: BOT_ID, username: BOT_USERNAME, is_bot: true },
+          text: 'Original bot answer',
+        },
+      }),
+    );
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage.mock.calls[0][0].text).toContain('Confirmed');
+
+    const llmCall = callLlm.mock.calls.find((call) => {
+      const request = call[0] as { body?: { tools?: unknown[] } };
+      return Array.isArray(request.body?.tools);
+    })?.[0] as { body: { input?: unknown[]; messages?: unknown[] } };
+    const messages = llmCall.body.input ?? llmCall.body.messages ?? [];
+    const userMessage = messages.find((m: unknown) => (m as { role: string }).role === 'user') as
+      | { content: string }
+      | undefined;
+    expect(userMessage?.content).toContain('Original bot answer');
+    expect(userMessage?.content).toMatch(
+      /^Context:\nReplied message:\nOriginal bot answer\n\nUse web search/u,
+    );
+
+    await app.stop();
+  });
+
   it('sends unsupported reply text for media replies', async () => {
     const { app, captured, sendMessage, logBotEvent } = await setupApp();
 

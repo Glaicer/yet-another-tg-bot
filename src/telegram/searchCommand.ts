@@ -54,9 +54,11 @@ export type SearchCommandDeps = {
   systemPrompt: string;
 };
 
+type SearchCommandEvent = Extract<ParsedEvent, { type: 'group_command' | 'admin_command' }>;
+
 export async function handleSearch(
   deps: SearchCommandDeps,
-  event: Extract<ParsedEvent, { type: 'group_command' }>,
+  event: SearchCommandEvent,
 ): Promise<void> {
   if (!deps.config.llm.supportsWebSearch) {
     return;

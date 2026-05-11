@@ -82,6 +82,27 @@ describe('parseMessage', () => {
     });
   });
 
+  it('includes replied text for admin private reply to bot message', () => {
+    const message = makeMessage({
+      chat: makePrivateChat(BASE_CONFIG.adminUserId),
+      from: makeUser(BASE_CONFIG.adminUserId),
+      text: 'Please expand on that',
+      reply_to_message: makeMessage({
+        chat: makePrivateChat(BASE_CONFIG.adminUserId),
+        from: makeBotUser(BASE_CONFIG.botId ?? 999, BASE_CONFIG.botUsername),
+        text: 'Original bot answer',
+      }),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result).toEqual({
+      type: 'admin_request',
+      chatId: BASE_CONFIG.adminUserId,
+      userId: BASE_CONFIG.adminUserId,
+      text: 'Please expand on that',
+      repliedText: 'Original bot answer',
+    });
+  });
+
   it('returns no-op for admin private message without text', () => {
     const message = makeMessage({
       chat: makePrivateChat(BASE_CONFIG.adminUserId),
@@ -100,6 +121,7 @@ describe('parseMessage', () => {
     const result = parseMessage(message, BASE_CONFIG);
     expect(result).toEqual({
       type: 'admin_command',
+      chatId: BASE_CONFIG.adminUserId,
       userId: BASE_CONFIG.adminUserId,
       command: 'status',
       args: '',
@@ -115,9 +137,32 @@ describe('parseMessage', () => {
     const result = parseMessage(message, BASE_CONFIG);
     expect(result).toEqual({
       type: 'admin_command',
+      chatId: BASE_CONFIG.adminUserId,
       userId: BASE_CONFIG.adminUserId,
       command: 'persona',
       args: 'wizard',
+    });
+  });
+
+  it('parses admin private search command with chat id and replied text', () => {
+    const message = makeMessage({
+      chat: makePrivateChat(BASE_CONFIG.adminUserId),
+      from: makeUser(BASE_CONFIG.adminUserId),
+      text: '/search verify this',
+      reply_to_message: makeMessage({
+        chat: makePrivateChat(BASE_CONFIG.adminUserId),
+        from: makeBotUser(BASE_CONFIG.botId ?? 999, BASE_CONFIG.botUsername),
+        text: 'Original bot answer',
+      }),
+    });
+    const result = parseMessage(message, BASE_CONFIG);
+    expect(result).toEqual({
+      type: 'admin_command',
+      chatId: BASE_CONFIG.adminUserId,
+      userId: BASE_CONFIG.adminUserId,
+      command: 'search',
+      args: 'verify this',
+      repliedText: 'Original bot answer',
     });
   });
 

@@ -55,6 +55,10 @@ export async function handleAdminCommand(
       await handlePersona(deps, event);
       return;
     }
+    case 'search': {
+      await handleSearch(deps, event);
+      return;
+    }
     default: {
       return;
     }
@@ -113,7 +117,7 @@ async function handleStatus(
 ): Promise<void> {
   const text = formatStatus(deps);
 
-  await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, event.userId, text);
+  await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, event.chatId, text);
 
   deps.logger.logBotEvent({
     type: 'command_status',
@@ -134,7 +138,7 @@ async function handlePersonas(
         )
       : deps.config.messages.personasEmpty;
 
-  await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, event.userId, text);
+  await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, event.chatId, text);
 
   deps.logger.logBotEvent({
     type: 'command_personas',
@@ -150,7 +154,7 @@ async function handlePersona(
   if (!name) {
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
-      event.userId,
+      event.chatId,
       deps.config.messages.personaMissingName,
     );
     return;
@@ -160,7 +164,7 @@ async function handlePersona(
   if (!ok) {
     await deps.sendSafeMessage(
       { api: deps.api, logger: deps.logger },
-      event.userId,
+      event.chatId,
       deps.config.messages.personaUnknown.replace('{name}', name),
     );
     deps.logger.logBotEvent({
@@ -173,7 +177,7 @@ async function handlePersona(
 
   await deps.sendSafeMessage(
     { api: deps.api, logger: deps.logger },
-    event.userId,
+    event.chatId,
     deps.config.messages.personaChanged.replace('{name}', name),
   );
 

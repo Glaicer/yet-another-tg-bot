@@ -32,15 +32,19 @@ export type ParsedEvent =
     }
   | {
       type: 'admin_command';
+      chatId: number;
+      threadId?: number;
       userId: number;
       command: string;
       args: string;
+      repliedText?: string;
     }
   | {
       type: 'admin_request';
       chatId: number;
       userId: number;
       text: string;
+      repliedText?: string;
     }
   | {
       type: 'unsupported_reply';

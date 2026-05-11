@@ -181,7 +181,8 @@ expect(sendMessage).toHaveBeenCalledWith(...);
    Replied context may come from user or bot message text, media captions, or Telegram quote text.
    Forum topic service messages are ignored as reply context so topic text messages still process normally.
    Telegram command registration is scoped: group commands are registered for all group chats, while
-   admin commands are registered for all private chats. Keep `/help` group-only.
+   admin commands are registered for all private chats. Keep `/help` group-only. `/search` is also
+   available in the admin private chat when web search is supported, including replied-message context.
 3. **New member greeting**: Allowed-group `new_chat_members` service messages are answered directly with
    `messages.greetUser` from config. This path must not call guardrails, rate limiting, queueing, typing, or LLM.
 4. **Typing indicator**: `sendChatAction('typing')` repeated at interval while LLM processes.

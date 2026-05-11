@@ -72,6 +72,10 @@ docker compose down
 docker compose up -d
 ```
 
+> Add bot to administrators of your Telegram group and disable Privacy mode in @BotFather.
+>
+> You can find group and user ids via @userinfobot. Group ids should be pasted to .env with minus
+
 ## Update
 
 Run `update.sh` it would fetch recent changes, rebuild the image and restart docker containers.
