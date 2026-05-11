@@ -1,4 +1,4 @@
-# Yet Another Telegram LLM bot
+# YAAI Bot - Yet Another AI Bot for Telegram
 
 A Telegram bot for one allowed group. It can call an LLM, use character personas, run safety checks, search the web, limit abuse, and write audit events to SQLite.
 
