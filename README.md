@@ -72,6 +72,14 @@ docker compose down
 docker compose up -d
 ```
 
+## Update
+
+Run `update.sh` it would fetch recent changes, rebuild the image and restart docker containers.
+
+Your `.env` and config files are safe, updates don't override them.
+
+If you want to update manually you can `git pull` new commits and perform `npm install && npm run build && npm run start` or restart containers manually.
+
 ## Environment variables
 
 Copy `.env.template` to `.env` and set at least these variables:
