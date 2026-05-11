@@ -1,38 +1,72 @@
+# ─── App ────────────────────────────────────────────────────────────────────
+# Environment name shown in logs (e.g. "production", "development").
+# logLevel: one of debug | info | warn | error.
 app:
   environment: production
   logLevel: info
 
+# ─── Telegram ──────────────────────────────────────────────────────────────
+# mode: polling (bot fetches updates) | webhook (Telegram pushes updates).
+# allowedChatIdEnv: env variable holding the group chat ID the bot responds in.
+# adminUserIdEnv: env variable holding the admin's Telegram user ID.
 telegram:
   mode: polling
   allowedChatIdEnv: TELEGRAM_ALLOWED_CHAT_ID
   adminUserIdEnv: TELEGRAM_ADMIN_USER_ID
+  # Typing indicator: repeats sendChatAction at interval while LLM processes.
   typingIndicator:
     enabled: true
     intervalMs: 4500
+  # Webhook settings (only used when mode is webhook).
+  # publicUrl: public HTTPS URL for webhook (null when polling).
+  # secretTokenEnv: env variable with webhook verification token.
   webhook:
     publicUrl: null
     path: /telegram/webhook
     secretTokenEnv: TELEGRAM_WEBHOOK_SECRET
 
+# ─── HTTP server ───────────────────────────────────────────────────────────
+# Serves /healthz (and webhook endpoint when mode is webhook).
+# port: 1–65535.
 http:
   enabled: true
   host: 0.0.0.0
   port: 3000
   healthPath: /healthz
 
+# ─── Storage ───────────────────────────────────────────────────────────────
+# type: only "sqlite" is supported.
+# databasePathEnv: env variable pointing to the SQLite database file.
 storage:
   type: sqlite
   databasePathEnv: SQLITE_DATABASE_PATH
 
+# ─── System prompt ─────────────────────────────────────────────────────────
+# file: path to a Markdown file containing the base system prompt.
 systemPrompt:
   file: config/production/prompts/system.md
 
+# ─── Characters / Personas ─────────────────────────────────────────────────
+# directory: folder with persona .md files (filename = persona name).
+# default: persona name to fall back to (must exist at startup).
+# selected: initial selection; overridden by SQLite setting after first run.
+# hotReload: re-read persona files on each /personas call and LLM request.
 characters:
   directory: config/production/characters
   default: default
   selected: default
   hotReload: true
 
+# ─── LLM ───────────────────────────────────────────────────────────────────
+# provider: must match a key in the "providers" map below.
+# apiMode: responses (OpenAI Responses API) | chat_completions (Chat Completions).
+# apiKeyEnv: env variable holding the LLM API key.
+# baseUrl: API base URL (e.g. https://api.openai.com/v1).
+# temperature: sampling temperature, 0–2.
+# maxTokens: maximum tokens in the generated response.
+# reasoningEffort: none | minimal | low | medium | high | xhigh.
+#   Only sent when the provider supports it.
+# supportsWebSearch: whether web search is available for this model.
 llm:
   provider: openai
   apiMode: responses
@@ -43,11 +77,21 @@ llm:
   maxTokens: 800
   reasoningEffort: none
   supportsWebSearch: true
+  # mode: openai_tool | openrouter_server_tool | openrouter_online_legacy | none.
+  # maxResults: maximum number of search results per query.
+  # requireCitations: include source citations in search responses.
   webSearch:
     mode: openai_tool
     maxResults: 5
     requireCitations: true
 
+# ─── Provider profiles ─────────────────────────────────────────────────────
+# Each key is a provider name that can be referenced by llm.provider.
+# type: only "openai-compatible" is supported.
+# supportsResponsesApi / supportsChatCompletionsApi: true | false | unknown.
+# supportsReasoningEffort: true | false | provider-dependent.
+# webSearchMode: openai_tool | openrouter_server_tool | openrouter_online_legacy | none.
+# legacyOnlineSuffix (optional): append ":online" to model name for legacy OpenRouter search.
 providers:
   openai:
     type: openai-compatible
@@ -78,6 +122,15 @@ providers:
     supportsReasoningEffort: false
     webSearchMode: none
 
+# ─── Guardrails ────────────────────────────────────────────────────────────
+# enabled: run input safety checks via an external LLM.
+# failOpenOnProviderError: continue without guardrails if the safety provider is down.
+# apiKeyEnv: env variable holding the guardrails API key.
+# model: meta-llama/llama-guard-4-12b is well tested and stongly recommended
+# timeoutMs: request timeout in milliseconds.
+# refusalMessage: message sent to user when input is blocked.
+# checkInput / checkOutput: whether to check user input / LLM output (output not used in MVP).
+# blockPromptInjection: block detected prompt-injection attempts.
 guardrails:
   enabled: true
   failOpenOnProviderError: true
@@ -91,6 +144,11 @@ guardrails:
   checkOutput: false
   blockPromptInjection: true
 
+# ─── Rate limiting ─────────────────────────────────────────────────────────
+# perUser: sliding-window limit per Telegram user.
+# perChat: sliding-window limit for the entire chat.
+# windowMs: window duration in milliseconds.
+# maxRequests: maximum requests allowed within the window.
 rateLimit:
   enabled: true
   perUser:
@@ -100,16 +158,27 @@ rateLimit:
     windowMs: 60000
     maxRequests: 20
 
+# ─── Request queue ─────────────────────────────────────────────────────────
+# Limits concurrent LLM requests and queues excess ones.
+# maxQueueSize: requests beyond this are rejected immediately.
+# timeoutMs: maximum time a request can wait in the queue.
 queue:
   enabled: true
   maxConcurrentRequests: 2
   maxQueueSize: 20
   timeoutMs: 60000
 
+# ─── Timeouts ──────────────────────────────────────────────────────────────
+# llmRequestMs: total timeout for an LLM HTTP request.
+# telegramSendMs: timeout for sending a reply message to Telegram.
 timeouts:
   llmRequestMs: 60000
   telegramSendMs: 10000
 
+# ─── Commands ──────────────────────────────────────────────────────────────
+# registerOnStartup: register commands with Telegram via setMyCommands on boot.
+# group: commands available to all users in the allowed group.
+# adminPrivate: commands available only to the admin in private chat.
 commands:
   registerOnStartup: true
   group:
@@ -125,12 +194,18 @@ commands:
     - command: persona
       description: Select persona
 
+# ─── Logging ───────────────────────────────────────────────────────────────
+# enabled: write events to the SQLite audit log.
+# logMessages: store full message text (disabled by default for privacy).
+# redactSecrets: strip API keys/tokens from log data before writing.
 logging:
   sqlite:
     enabled: true
     logMessages: false
     redactSecrets: true
 
+# ─── Messages ──────────────────────────────────────────────────────────────
+# User-facing reply strings. Templates support {name} and {list} placeholders.
 messages:
   unsupportedReply: "I can only work with text messages for now."
   rateLimitExceeded: "Rate limit exceeded. Please try again later."

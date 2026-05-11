@@ -1,0 +1,112 @@
+# Ready-to-paste examples of the `llm:` config section.
+# Each example includes both the `llm:` block AND the matching `providers:` entry.
+# Copy the relevant block over the existing sections in your config.yaml.
+# Update apiKeyEnv and model as needed for your setup.
+
+# ─── Example 1: OpenAI ─────────────────────────────────────────────────────
+# Uses Responses API, web search via openai_tool, reasoning effort supported.
+---
+llm:
+  provider: openai
+  apiMode: responses
+  apiKeyEnv: MAIN_LLM_API_KEY
+  baseUrl: https://api.openai.com/v1
+  model: gpt-5.5-mini
+  temperature: 0.7
+  maxTokens: 800
+  reasoningEffort: medium
+  supportsWebSearch: true
+  webSearch:
+    mode: openai_tool
+    maxResults: 5
+    requireCitations: true
+
+providers:
+  openai:
+    type: openai-compatible
+    supportsResponsesApi: true
+    supportsChatCompletionsApi: true
+    supportsReasoningEffort: true
+    webSearchMode: openai_tool
+
+# ─── Example 2: OpenRouter (DeepSeek) ──────────────────────────────────────
+# Uses Chat Completions API, web search via openrouter_server_tool.
+# Default model: deepseek/deepseek-v4-pro.
+---
+llm:
+  provider: openrouter
+  apiMode: chat_completions
+  apiKeyEnv: MAIN_LLM_API_KEY
+  baseUrl: https://openrouter.ai/api/v1
+  model: deepseek/deepseek-v4-pro
+  temperature: 0.7
+  maxTokens: 800
+  reasoningEffort: none
+  supportsWebSearch: true
+  webSearch:
+    mode: openrouter_server_tool
+    maxResults: 5
+    requireCitations: true
+
+providers:
+  openrouter:
+    type: openai-compatible
+    supportsResponsesApi: true
+    supportsChatCompletionsApi: true
+    supportsReasoningEffort: provider-dependent
+    webSearchMode: openrouter_server_tool
+    legacyOnlineSuffix: true
+
+# ─── Example 3: OpenCode Go ────────────────────────────────────────────────
+# Chat Completions API only. Web search disabled. Reasoning effort: provider-dependent.
+# Default model: opencode-go/qwen3.6-plus.
+---
+llm:
+  provider: opencode_go
+  apiMode: chat_completions
+  apiKeyEnv: MAIN_LLM_API_KEY
+  baseUrl: https://api.opencode.ai/v1
+  model: opencode-go/qwen3.6-plus
+  temperature: 0.7
+  maxTokens: 800
+  reasoningEffort: none
+  supportsWebSearch: false
+  webSearch:
+    mode: none
+    maxResults: 5
+    requireCitations: false
+
+providers:
+  opencode_go:
+    type: openai-compatible
+    supportsResponsesApi: unknown
+    supportsChatCompletionsApi: unknown
+    supportsReasoningEffort: provider-dependent
+    webSearchMode: none
+
+# ─── Example 4: Ollama Cloud ───────────────────────────────────────────────
+# Chat Completions API. Web search disabled. Reasoning effort not supported.
+# Default model: gpt-oss:120b-cloud.
+---
+llm:
+  provider: ollama_cloud
+  apiMode: chat_completions
+  apiKeyEnv: MAIN_LLM_API_KEY
+  baseUrl: https://api.ollama.com/v1
+  model: gpt-oss:120b-cloud
+  temperature: 0.7
+  maxTokens: 800
+  reasoningEffort: none
+  supportsWebSearch: false
+  webSearch:
+    mode: none
+    maxResults: 5
+    requireCitations: false
+
+providers:
+  ollama_cloud:
+    type: openai-compatible
+    supportsResponsesApi: unknown
+    supportsChatCompletionsApi: true
+    supportsReasoningEffort: false
+    webSearchMode: none
