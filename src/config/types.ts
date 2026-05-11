@@ -1,3 +1,25 @@
+export type LlmFallbackConfig =
+  | {
+      enabled: false;
+    }
+  | {
+      enabled: true;
+      provider: string;
+      apiMode: 'responses' | 'chat_completions';
+      apiKey: string;
+      baseUrl: string;
+      model: string;
+      temperature: number;
+      maxTokens: number;
+      reasoningEffort: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+      supportsWebSearch: boolean;
+      webSearch: {
+        mode: 'openai_tool' | 'openrouter_server_tool' | 'openrouter_online_legacy' | 'none';
+        maxResults: number;
+        requireCitations: boolean;
+      };
+    };
+
 export type ResolvedConfig = {
   app: {
     environment: string;
@@ -52,6 +74,7 @@ export type ResolvedConfig = {
       maxResults: number;
       requireCitations: boolean;
     };
+    fallback: LlmFallbackConfig;
   };
   firecrawl: {
     apiKey?: string;

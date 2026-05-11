@@ -137,6 +137,22 @@ export function loadConfig(options: LoadConfigOptions): ResolvedConfig {
       reasoningEffort: raw.llm.reasoningEffort,
       supportsWebSearch: raw.llm.supportsWebSearch,
       webSearch: raw.llm.webSearch,
+      fallback:
+        raw.llm.fallback.enabled === true
+          ? {
+              enabled: true,
+              provider: raw.llm.fallback.provider,
+              apiMode: raw.llm.fallback.apiMode,
+              apiKey: resolveEnvVarRequired(raw.llm.fallback.apiKeyEnv),
+              baseUrl: raw.llm.fallback.baseUrl,
+              model: raw.llm.fallback.model,
+              temperature: raw.llm.fallback.temperature,
+              maxTokens: raw.llm.fallback.maxTokens,
+              reasoningEffort: raw.llm.fallback.reasoningEffort,
+              supportsWebSearch: raw.llm.fallback.supportsWebSearch,
+              webSearch: raw.llm.fallback.webSearch,
+            }
+          : { enabled: false },
     },
     firecrawl: {
       apiKey: firecrawlApiKey,

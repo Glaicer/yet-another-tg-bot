@@ -218,7 +218,7 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
         maxTokens: deps.config.llm.maxTokens,
       });
 
-      const response = await deps.callLlm(request, deps.config.timeouts.llmRequestMs);
+      const response = await callLlmWithOptionalFallback(deps, request, messages);
 
       await deps.sendSafeMessage({ api: deps.api, logger: deps.logger }, chatId, response.text, {
         threadId,
@@ -232,6 +232,8 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const primaryError =
+        error instanceof FallbackLlmError ? error.primaryErrorMessage : undefined;
       await deps.sendSafeMessage(
         { api: deps.api, logger: deps.logger },
         chatId,
@@ -242,7 +244,7 @@ async function handleLlmRequest(deps: MessageHandlerDeps, event: LlmRequestEvent
         type: 'llm_error',
         chatId: String(chatId),
         userId: String(userId),
-        metadata: { error: errorMessage },
+        metadata: primaryError ? { error: errorMessage, primaryError } : { error: errorMessage },
       });
       deps.logger.logConsoleEvent({
         level: 'error',
@@ -343,4 +345,74 @@ async function buildUserTextWithUrlContext(
     'User supplied web pages as additional context. Use the extracted markdown below as supporting material, but prefer the user request when there is any conflict.',
     pageContext,
   ].join('\n\n');
+}
+
+async function callLlmWithOptionalFallback(
+  deps: MessageHandlerDeps,
+  primaryRequest: MappedRequest,
+  messages: PromptMessage[],
+): Promise<LlmResponse> {
+  try {
+    return await deps.callLlm(primaryRequest, deps.config.timeouts.llmRequestMs);
+  } catch (error) {
+    const fallback = deps.config.llm.fallback ?? { enabled: false };
+    if (!fallback.enabled || !isRetryableLlmError(error)) {
+      throw error;
+    }
+
+    const fallbackConfig: ResolvedConfig = {
+      ...deps.config,
+      llm: {
+        ...deps.config.llm,
+        provider: fallback.provider,
+        apiMode: fallback.apiMode,
+        apiKey: fallback.apiKey,
+        baseUrl: fallback.baseUrl,
+        model: fallback.model,
+        temperature: fallback.temperature,
+        maxTokens: fallback.maxTokens,
+        reasoningEffort: fallback.reasoningEffort,
+        supportsWebSearch: fallback.supportsWebSearch,
+        webSearch: fallback.webSearch,
+        fallback: { enabled: false },
+      },
+    };
+
+    const fallbackRequest = deps.mapLlmRequest(fallbackConfig, {
+      messages,
+      model: fallback.model,
+      temperature: fallback.temperature,
+      maxTokens: fallback.maxTokens,
+    });
+
+    try {
+      return await deps.callLlm(fallbackRequest, deps.config.timeouts.llmRequestMs);
+    } catch (fallbackError) {
+      throw new FallbackLlmError(fallbackError, error);
+    }
+  }
+}
+
+function isRetryableLlmError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const statusMatch = message.match(/LLM request failed:\s+(\d{3})\b/);
+  if (statusMatch) {
+    const status = Number(statusMatch[1]);
+    return status >= 500 || FALLBACK_RETRY_HTTP_STATUSES.has(status);
+  }
+
+  return message.includes('LLM request timed out') || message.startsWith('LLM request failed:');
+}
+
+const FALLBACK_RETRY_HTTP_STATUSES = new Set([400, 401, 403, 404, 408]);
+
+class FallbackLlmError extends Error {
+  readonly primaryErrorMessage: string;
+
+  constructor(fallbackError: unknown, primaryError: unknown) {
+    super(fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+    this.name = 'FallbackLlmError';
+    this.primaryErrorMessage =
+      primaryError instanceof Error ? primaryError.message : String(primaryError);
+  }
 }

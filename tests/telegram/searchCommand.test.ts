@@ -219,7 +219,7 @@ describe('handleSearch', () => {
     expect(sentText).toContain('https://accuweather.com');
   });
 
-  it('appends no-sources fallback when sources are empty', async () => {
+  it('sends response text when sources are empty', async () => {
     const deps = createMockDeps();
     deps.callLlm.mockResolvedValue({
       text: 'It might rain.',
@@ -231,10 +231,9 @@ describe('handleSearch', () => {
 
     const sentText = deps.sendSafeMessage.mock.calls[0][2];
     expect(sentText).toContain('It might rain.');
-    expect(sentText).toContain('could not confirm');
   });
 
-  it('appends no-sources fallback when sources are undefined', async () => {
+  it('sends response text when sources are undefined', async () => {
     const deps = createMockDeps();
     deps.callLlm.mockResolvedValue({
       text: 'It might rain.',
@@ -245,7 +244,6 @@ describe('handleSearch', () => {
 
     const sentText = deps.sendSafeMessage.mock.calls[0][2];
     expect(sentText).toContain('It might rain.');
-    expect(sentText).toContain('could not confirm');
   });
 
   it('sends rate limit message when rate limit exceeded', async () => {

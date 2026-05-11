@@ -33,6 +33,7 @@ function baseYaml(opts?: {
   reasoningEffort?: string;
   webhook?: string;
   guardrailsEnabled?: boolean;
+  fallback?: string;
 }): string {
   const selected = opts?.selectedCharacter ?? 'default';
   const mode = opts?.mode ?? 'polling';
@@ -91,6 +92,7 @@ llm:
     mode: openai_tool
     maxResults: 5
     requireCitations: true
+${opts?.fallback ?? '  fallback:\n    enabled: false'}
 
 providers:
   openai:
@@ -209,6 +211,7 @@ describe('loadConfig', () => {
       GUARDRAILS_API_KEY: 'test-guard-key',
       SQLITE_DATABASE_PATH: path.join(tempDir, 'data', 'bot.sqlite'),
       TELEGRAM_WEBHOOK_SECRET: 'webhook-secret',
+      FALLBACK_LLM_API_KEY: 'test-fallback-key',
     };
   });
 
@@ -238,6 +241,78 @@ describe('loadConfig', () => {
     expect(config.app.logLevel).toBe('info');
     expect(config.llm.apiMode).toBe('responses');
     expect(config.llm.reasoningEffort).toBe('none');
+    expect(config.llm.fallback?.enabled).toBe(false);
+  });
+
+  it('loads enabled fallback LLM config', () => {
+    const { promptsDir, charsDir } = setupFiles(tempDir);
+    const yamlContent = baseYaml({
+      fallback: `  fallback:
+    enabled: true
+    provider: openrouter
+    apiMode: chat_completions
+    apiKeyEnv: FALLBACK_LLM_API_KEY
+    baseUrl: https://openrouter.ai/api/v1
+    model: fallback-model
+    temperature: 0.2
+    maxTokens: 400
+    reasoningEffort: none
+    supportsWebSearch: false
+    webSearch:
+      mode: none
+      maxResults: 3
+      requireCitations: false`,
+    })
+      .replace(/PROMPTS_DIR/g, promptsDir)
+      .replace(/CHARS_DIR/g, charsDir);
+    const configPath = writeYaml(tempDir, 'config.yaml', yamlContent);
+
+    const config = loadConfig({ configPath });
+
+    expect(config.llm.fallback).toEqual({
+      enabled: true,
+      provider: 'openrouter',
+      apiMode: 'chat_completions',
+      apiKey: 'test-fallback-key',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      model: 'fallback-model',
+      temperature: 0.2,
+      maxTokens: 400,
+      reasoningEffort: 'none',
+      supportsWebSearch: false,
+      webSearch: {
+        mode: 'none',
+        maxResults: 3,
+        requireCitations: false,
+      },
+    });
+  });
+
+  it('throws when enabled fallback LLM API key is missing', () => {
+    process.env.FALLBACK_LLM_API_KEY = undefined;
+    const { promptsDir, charsDir } = setupFiles(tempDir);
+    const yamlContent = baseYaml({
+      fallback: `  fallback:
+    enabled: true
+    provider: openrouter
+    apiMode: chat_completions
+    apiKeyEnv: FALLBACK_LLM_API_KEY
+    baseUrl: https://openrouter.ai/api/v1
+    model: fallback-model
+    temperature: 0.2
+    maxTokens: 400
+    reasoningEffort: none
+    supportsWebSearch: false
+    webSearch:
+      mode: none
+      maxResults: 3
+      requireCitations: false`,
+    })
+      .replace(/PROMPTS_DIR/g, promptsDir)
+      .replace(/CHARS_DIR/g, charsDir);
+    const configPath = writeYaml(tempDir, 'config.yaml', yamlContent);
+
+    expect(() => loadConfig({ configPath })).toThrow(/FALLBACK_LLM_API_KEY/i);
   });
 
   it('loads optional Firecrawl API key from environment when present', () => {

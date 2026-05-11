@@ -67,6 +67,7 @@ characters:
 # reasoningEffort: none | minimal | low | medium | high | xhigh.
 #   Only sent when the provider supports it.
 # supportsWebSearch: whether web search is available for this model.
+# fallback: optional backup profile used when the main LLM fails with a server/network/timeout error.
 llm:
   provider: openai
   apiMode: responses
@@ -84,6 +85,21 @@ llm:
     mode: openai_tool
     maxResults: 5
     requireCitations: true
+  fallback:
+    enabled: false
+    # provider: openrouter
+    # apiMode: chat_completions
+    # apiKeyEnv: FALLBACK_LLM_API_KEY
+    # baseUrl: https://openrouter.ai/api/v1
+    # model: openai/gpt-5.5-mini
+    # temperature: 0.7
+    # maxTokens: 800
+    # reasoningEffort: none
+    # supportsWebSearch: false
+    # webSearch:
+    #   mode: none
+    #   maxResults: 5
+    #   requireCitations: false
 
 # ─── Provider profiles ─────────────────────────────────────────────────────
 # Each key is a provider name that can be referenced by llm.provider.

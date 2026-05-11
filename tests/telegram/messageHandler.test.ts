@@ -35,10 +35,23 @@ function createMockDeps(): MessageHandlerDeps {
         baseUrl: 'https://api.firecrawl.dev',
       },
       llm: {
+        provider: 'openai',
+        apiMode: 'responses',
+        apiKey: 'main-key',
+        baseUrl: 'https://api.test.com/v1',
         model: 'gpt-4',
         temperature: 0.7,
         maxTokens: 800,
+        reasoningEffort: 'none',
         supportsWebSearch: true,
+        webSearch: {
+          mode: 'none',
+          maxResults: 5,
+          requireCitations: false,
+        },
+        fallback: {
+          enabled: false,
+        },
       },
       timeouts: {
         llmRequestMs: 5000,
@@ -472,6 +485,160 @@ describe('createMessageHandler', () => {
         userId: '111',
       },
     });
+  });
+
+  it('retries with fallback model on primary LLM server error', async () => {
+    const deps = createMockDeps();
+    deps.config.llm.fallback = {
+      enabled: true,
+      provider: 'openrouter',
+      apiMode: 'chat_completions',
+      apiKey: 'fallback-key',
+      baseUrl: 'https://fallback.test/v1',
+      model: 'fallback-model',
+      temperature: 0.3,
+      maxTokens: 500,
+      reasoningEffort: 'none',
+      supportsWebSearch: false,
+      webSearch: {
+        mode: 'none',
+        maxResults: 3,
+        requireCitations: false,
+      },
+    };
+    deps.mapLlmRequest.mockImplementation((config: ResolvedConfig, options) => ({
+      url: `${config.llm.baseUrl}/chat/completions`,
+      headers: { Authorization: `Bearer ${config.llm.apiKey}` },
+      body: { model: options.model, messages: [] },
+    }));
+    deps.callLlm
+      .mockRejectedValueOnce(new Error('LLM request failed: 525 https://api.test.com/v1/responses'))
+      .mockResolvedValueOnce({ text: 'Fallback response' });
+    const handler = createMessageHandler(deps);
+
+    await handler(makeGroupRequest());
+
+    expect(deps.mapLlmRequest).toHaveBeenNthCalledWith(1, deps.config, {
+      messages: [
+        { role: 'system', content: 'System prompt' },
+        { role: 'user', content: 'User request' },
+      ],
+      model: 'gpt-4',
+      temperature: 0.7,
+      maxTokens: 800,
+    });
+    expect(deps.mapLlmRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        llm: expect.objectContaining({
+          provider: 'openrouter',
+          model: 'fallback-model',
+          apiKey: 'fallback-key',
+        }),
+      }),
+      {
+        messages: [
+          { role: 'system', content: 'System prompt' },
+          { role: 'user', content: 'User request' },
+        ],
+        model: 'fallback-model',
+        temperature: 0.3,
+        maxTokens: 500,
+      },
+    );
+    expect(deps.callLlm).toHaveBeenCalledTimes(2);
+    expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+      { api: deps.api, logger: deps.logger },
+      -1001234567890,
+      'Fallback response',
+      { threadId: undefined },
+    );
+  });
+
+  it.each([400, 401, 403, 404, 408])(
+    'retries with fallback model on primary LLM %i error',
+    async (status) => {
+      const deps = createMockDeps();
+      deps.config.llm.fallback = {
+        enabled: true,
+        provider: 'openrouter',
+        apiMode: 'chat_completions',
+        apiKey: 'fallback-key',
+        baseUrl: 'https://fallback.test/v1',
+        model: 'fallback-model',
+        temperature: 0.3,
+        maxTokens: 500,
+        reasoningEffort: 'none',
+        supportsWebSearch: false,
+        webSearch: {
+          mode: 'none',
+          maxResults: 3,
+          requireCitations: false,
+        },
+      };
+      deps.callLlm
+        .mockRejectedValueOnce(
+          new Error(`LLM request failed: ${status} https://api.test.com/v1/responses`),
+        )
+        .mockResolvedValueOnce({ text: `Fallback response for ${status}` });
+      const handler = createMessageHandler(deps);
+
+      await handler(makeGroupRequest());
+
+      expect(deps.callLlm).toHaveBeenCalledTimes(2);
+      expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+        { api: deps.api, logger: deps.logger },
+        -1001234567890,
+        `Fallback response for ${status}`,
+        { threadId: undefined },
+      );
+    },
+  );
+
+  it('sends llmError when primary and fallback LLM calls fail', async () => {
+    const deps = createMockDeps();
+    deps.config.llm.fallback = {
+      enabled: true,
+      provider: 'openrouter',
+      apiMode: 'chat_completions',
+      apiKey: 'fallback-key',
+      baseUrl: 'https://fallback.test/v1',
+      model: 'fallback-model',
+      temperature: 0.3,
+      maxTokens: 500,
+      reasoningEffort: 'none',
+      supportsWebSearch: false,
+      webSearch: {
+        mode: 'none',
+        maxResults: 3,
+        requireCitations: false,
+      },
+    };
+    deps.callLlm
+      .mockRejectedValueOnce(new Error('LLM request failed: 525 https://api.test.com/v1/responses'))
+      .mockRejectedValueOnce(
+        new Error('LLM request failed: 502 https://fallback.test/v1/chat/completions'),
+      );
+    const handler = createMessageHandler(deps);
+
+    await handler(makeGroupRequest());
+
+    expect(deps.callLlm).toHaveBeenCalledTimes(2);
+    expect(deps.sendSafeMessage).toHaveBeenCalledWith(
+      { api: deps.api, logger: deps.logger },
+      -1001234567890,
+      deps.config.messages.llmError,
+      { threadId: undefined },
+    );
+    expect(deps.logger.logBotEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'llm_error',
+        metadata: {
+          error: 'LLM request failed: 502 https://fallback.test/v1/chat/completions',
+          primaryError: 'LLM request failed: 525 https://api.test.com/v1/responses',
+        },
+      }),
+    );
   });
 
   it('sends error message and logs on LLM timeout', async () => {

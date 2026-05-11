@@ -43,6 +43,7 @@ export function createMockConfig(overrides?: Partial<ResolvedConfig>): ResolvedC
       reasoningEffort: 'none',
       supportsWebSearch: true,
       webSearch: { mode: 'openai_tool', maxResults: 5, requireCitations: true },
+      fallback: { enabled: false },
     },
     providers: {
       openai: {

@@ -13,6 +13,29 @@ export const webSearchModeSchema = z.enum([
   'none',
 ]);
 
+const llmFallbackSchema = z.discriminatedUnion('enabled', [
+  z.object({
+    enabled: z.literal(false),
+  }),
+  z.object({
+    enabled: z.literal(true),
+    provider: z.string().min(1),
+    apiMode: apiModeSchema,
+    apiKeyEnv: z.string().min(1),
+    baseUrl: z.string().url(),
+    model: z.string().min(1),
+    temperature: z.number().min(0).max(2),
+    maxTokens: z.number().int().positive(),
+    reasoningEffort: reasoningEffortSchema,
+    supportsWebSearch: z.boolean(),
+    webSearch: z.object({
+      mode: webSearchModeSchema,
+      maxResults: z.number().int().positive(),
+      requireCitations: z.boolean(),
+    }),
+  }),
+]);
+
 export const rawConfigSchema = z.object({
   app: z.object({
     environment: z.string().min(1),
@@ -66,6 +89,7 @@ export const rawConfigSchema = z.object({
       maxResults: z.number().int().positive(),
       requireCitations: z.boolean(),
     }),
+    fallback: llmFallbackSchema.default({ enabled: false }),
   }),
   providers: z.record(
     z.string().min(1),
