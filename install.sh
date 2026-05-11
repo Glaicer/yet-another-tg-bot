@@ -29,7 +29,7 @@ copy_if_missing() {
 prompt_value() {
   local varname="$1" prompt_text="$2"
   if [ -z "${!varname:-}" ]; then
-    printf "  ${BOLD}${prompt_text}:${NC} "
+      printf "  ${BOLD}${prompt_text}:${NC} "
     read -r value
     printf '%s=%s\n' "$varname" "$value" >> "$SCRIPT_DIR/.env"
   else
@@ -47,8 +47,7 @@ info "Setting up environment variables"
 if [ -f .env ]; then
   warn ".env already exists — skipping setup"
 else
-  cp .env.template .env
-  ok "Created .env from template"
+  printf '# Yet Another TG Bot\n' > .env
 
   printf "\n${BOLD}Required secrets${NC}\n"
 
@@ -57,6 +56,18 @@ else
   prompt_value "TELEGRAM_ADMIN_USER_ID"   "Admin User ID (your Telegram user ID)"
   prompt_value "MAIN_LLM_API_KEY"         "Main LLM API Key"
   prompt_value "GUARDRAILS_API_KEY"        "Guardrails API Key"
+
+  printf "\n${BOLD}Optional settings${NC}\n"
+  prompt_value "FIRECRAWL_API_KEY"        "Firecrawl API key (optional, press Enter to skip)" ""
+
+  printf 'SQLITE_DATABASE_PATH=./data/bot.sqlite\n' >> .env
+
+  printf "\n${BOLD}Provider API keys (optional)${NC}\n"
+
+  printf 'OPENAI_API_KEY=\n' >> .env
+  printf 'OPENROUTER_API_KEY=\n' >> .env
+  printf 'OLLAMA_CLOUD_API_KEY=\n' >> .env
+  printf 'OPENCODE_GO_API_KEY=\n' >> .env
 
   printf "\n"
   ok "Secrets written to .env"
