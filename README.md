@@ -61,6 +61,17 @@ Run `install.sh` and follow instructions or:
 4. Run `npm run build`.
 5. Run `npm start`.
 
+For docker deployments run:
+
+`docker compose up --build -d`
+
+After changing `.env` or config values, restart the container:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
 ## Environment variables
 
 Copy `.env.template` to `.env` and set at least these variables:
